@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "name": "shoply-app",
 "main": "node_modules/expo/AppEntry.js",
 "version": "1.0.0",
@@ -46,4 +47,20 @@
     "typescript": "~5.9.2"
   },
   "private": true
+=======
+  "name": "backend-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+>>>>>>> b011cf17ef44c766e25bfbbc494a0fc7ef5bb7ea
 }
