@@ -1,25 +1,34 @@
 package com.shoply.app.ui.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.navigation.NavHostController
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.shoply.app.ui.screens.LoginScreen
 import com.shoply.app.ui.screens.MainScreen
+import com.shoply.app.viewmodel.ShoppingViewModel
 
 @Composable
-fun SetupNavGraph(navController: NavHostController) {
+fun NavGraph() { // השם המעודכן של הקובץ שלך
+    val navController = rememberNavController()
+    val shoppingViewModel: ShoppingViewModel = viewModel()
+
     NavHost(
         navController = navController,
         startDestination = "login"
     ) {
         composable("login") {
-            LoginScreen(onLoginSuccess = {
-                navController.navigate("main")
-            })
+            LoginScreen(
+                navController = navController,
+                viewModel = shoppingViewModel
+            )
         }
         composable("main") {
-            MainScreen()
+            MainScreen(
+                navController = navController,
+                viewModel = shoppingViewModel
+            )
         }
     }
 }
