@@ -13,15 +13,14 @@ import androidx.compose.ui.unit.dp
 fun ShoplyButton(
     text: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     Button(
         onClick = onClick,
+        enabled = enabled,
         modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        shape = RoundedCornerShape(12.dp) // פינות מעוגלות
     ) {
-        Text(text = text)
+        Text(text)
     }
 }
