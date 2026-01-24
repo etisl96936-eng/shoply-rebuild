@@ -29,7 +29,7 @@ class ShoppingViewModel : ViewModel() {
     fun addItem(name: String, quantity: String) {
         viewModelScope.launch {
             val newItem = ShoppingItem(
-                name = name,
+                title = name,
                 quantity = quantity,
                 timestamp = System.currentTimeMillis() //  סדר כרונולוגי
             )
