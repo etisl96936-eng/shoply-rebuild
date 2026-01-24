@@ -9,7 +9,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.shoply.app.ui.theme.ShoplyAppTheme // שנה אם צריך
+import com.shoply.app.ui.theme.ShoplyAppTheme
+
+
 
 @Preview(showBackground = true)
 @Composable
