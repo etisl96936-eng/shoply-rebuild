@@ -6,8 +6,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material3.Icon
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -15,6 +15,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
+import coil.compose.rememberAsyncImagePainter
 
 @Composable
 fun ShoplyImage(
@@ -25,16 +26,24 @@ fun ShoplyImage(
 ) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
 
+        // אם אין URL – מציגים placeholder
+        if (imageUrl.isNullOrBlank()) {
+            Icon(
+                imageVector = Icons.Default.Image,
+                contentDescription = "No image"
+            )
+            return
+        }
+
+        val painter = rememberAsyncImagePainter(model = imageUrl)
+
         AsyncImage(
             model = imageUrl,
             contentDescription = contentDescription,
             modifier = Modifier.fillMaxSize(),
-            contentScale = contentScale,
-            onState = { /* ניהול מצב מתבצע דרך painterState למטה */ }
+            contentScale = contentScale
         )
 
-        // Overlay למצבים (loading / error / empty)
-        val painter = coil.compose.rememberAsyncImagePainter(model = imageUrl)
         when (painter.state) {
             is AsyncImagePainter.State.Loading -> {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp))
@@ -45,14 +54,7 @@ fun ShoplyImage(
                     contentDescription = "Image failed to load"
                 )
             }
-            else -> {
-                if (imageUrl.isNullOrBlank()) {
-                    Icon(
-                        imageVector = Icons.Default.Image,
-                        contentDescription = "No image"
-                    )
-                }
-            }
+            else -> Unit
         }
     }
 }
