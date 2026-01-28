@@ -4,49 +4,58 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shoply.app.data.ShoppingItem
 import com.shoply.app.data.repository.ShoppingRepository
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
+import com.shoply.app.ui.state.UiState
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class ShoppingViewModel : ViewModel() {
-    // אתחול ה-Repository
     private val repository = ShoppingRepository()
 
     /**
-     * זוהי הדרך המקצועית ב-Compose:
-     * ה-ViewModel "מאזין" ל-Flow מה-Repository והופך אותו ל-StateFlow.
-     * כך המסך (UI) יתעדכן אוטומטית בכל פעם שיש שינוי ב-Firebase.
+     * שדרוג: אנחנו הופכים את ה-Flow של ה-Repository ל-Flow של UiState.
+     * כך המסך ידע אם להציג Spinner טעינה, הודעת שגיאה או את הרשימה.
      */
-    val items: StateFlow<List<ShoppingItem>> = repository.getItemsFlow()
+    val uiState: StateFlow<UiState<List<ShoppingItem>>> = repository.getItemsFlow()
+        .map { items ->
+            // אם הנתונים הגיעו בהצלחה
+            UiState.Success(items) as UiState<List<ShoppingItem>>
+        }
+        .catch { e ->
+            // אם קרתה שגיאה בדרך
+            emit(UiState.Error(e.message ?: "שגיאה לא ידועה"))
+        }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList() // רשימה ריקה עד שהנתונים מגיעים מהענן
+            initialValue = UiState.Loading // הסטייט ההתחלתי הוא טעינה
         )
 
-    // פונקציה להוספת מוצר ( עטרה/אור)
-    fun addItem(name: String, quantity: String) {
+    // פונקציה להוספת מוצר
+    fun addItem(name: String, quantity: String, description: String, category: String) {
         viewModelScope.launch {
             val newItem = ShoppingItem(
                 title = name,
                 quantity = quantity,
-                timestamp = System.currentTimeMillis() //  סדר כרונולוגי
+                description = description,
+                category = category,
+                timestamp = System.currentTimeMillis()
             )
             repository.addItem(newItem)
         }
     }
 
-    // פונקציה למחיקת מוצר ( עטרה)
+    // פונקציה למחיקת מוצר
     fun deleteItem(itemId: String) {
         viewModelScope.launch {
             repository.deleteItem(itemId)
         }
     }
 
-    // פונקציה לסימון "בוצע" על מוצר ( אתי)
+    // פונקציה לסימון "בוצע"
     fun toggleItemChecked(item: ShoppingItem) {
         viewModelScope.launch {
+            // ב-Repository שלך הפונקציה מוגדרת לקבל ID ו-Boolean חדש
+            // לכן אנחנו שולחים את item.id ואת הערך ההפוך ממה שיש עכשיו
             repository.toggleItemChecked(item.id, !item.isChecked)
         }
     }
