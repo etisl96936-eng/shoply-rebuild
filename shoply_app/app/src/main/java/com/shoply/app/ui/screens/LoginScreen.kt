@@ -67,7 +67,6 @@ fun LoginScreen(
             },
             label = "שם משתמש",
             isError = showError,
-            supportingText = if (showError) null else "admin"
         )
 
         Spacer(Modifier.height(ShoplySpacing.medium))
@@ -83,7 +82,6 @@ fun LoginScreen(
             keyboardType = KeyboardType.Password,
             isPassword = true,
             isError = showError,
-            supportingText = if (showError) null else "123456"
         )
 
         Spacer(Modifier.height(ShoplySpacing.medium))
