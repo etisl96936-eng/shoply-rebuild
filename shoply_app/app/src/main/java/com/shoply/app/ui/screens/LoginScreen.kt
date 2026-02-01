@@ -14,7 +14,7 @@ import com.shoply.app.viewmodel.ShoppingViewModel
 
 /**
  * מסך התחברות
- * מעודכן לעקביות עם Design System - אבן דרך 1.5
+ * חובה להזדהות לפני כניסה למערכת
  */
 @Composable
 fun LoginScreen(
@@ -67,6 +67,7 @@ fun LoginScreen(
             },
             label = "שם משתמש",
             isError = showError,
+            supportingText = if (showError) null else "admin"
         )
 
         Spacer(Modifier.height(ShoplySpacing.medium))
@@ -82,6 +83,7 @@ fun LoginScreen(
             keyboardType = KeyboardType.Password,
             isPassword = true,
             isError = showError,
+            supportingText = if (showError) null else "123456"
         )
 
         Spacer(Modifier.height(ShoplySpacing.medium))

@@ -2,12 +2,17 @@ package com.shoply.app.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,6 +24,7 @@ import com.shoply.app.ui.state.UiState
 import com.shoply.app.viewmodel.ShoppingViewModel
 import com.shoply.app.data.ShoppingItem
 import com.shoply.app.ui.components.*
+import com.shoply.app.ui.theme.ShoplySpacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,61 +38,191 @@ fun MainScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var itemToDelete by remember { mutableStateOf<ShoppingItem?>(null) }
 
+    // חיפוש וסינון
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
+
+    // טאב נוכחי: 0 = כל המוצרים, 1 = הרשימה שלי
+    var selectedTab by remember { mutableStateOf(0) }
+
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Shoply - הרשימות שלי") })
+            TopAppBar(
+                title = {
+                    Text(
+                        if (selectedTab == 0) "Shoply - כל המוצרים"
+                        else "Shoply - הרשימה שלי"
+                    )
+                }
+            )
+        },
+        bottomBar = {
+            NavigationBar {
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.List, contentDescription = null) },
+                    label = { Text("כל המוצרים") },
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 }
+                )
+                NavigationBarItem(
+                    icon = {
+                        BadgedBox(
+                            badge = {
+                                when (val s = state) {
+                                    is UiState.Success -> {
+                                        val checkedCount = s.data.count { it.isChecked }
+                                        if (checkedCount > 0) {
+                                            Badge { Text("$checkedCount") }
+                                        }
+                                    }
+                                    else -> {}
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Default.ShoppingCart, contentDescription = null)
+                        }
+                    },
+                    label = { Text("הרשימה שלי") },
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 }
+                )
+            }
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }) {
-                Icon(Icons.Default.Add, contentDescription = "הוסף מוצר")
+            // הכפתור + מופיע רק בטאב "כל המוצרים"
+            if (selectedTab == 0) {
+                FloatingActionButton(onClick = { showAddDialog = true }) {
+                    Icon(Icons.Default.Add, contentDescription = "הוסף מוצר")
+                }
             }
         }
     ) { padding ->
-        Box(
+        Column(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
         ) {
             when (val s = state) {
                 is UiState.Loading -> {
-                    LoadingView(message = "טוען את הרשימה שלך...")
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        LoadingView(
+                            message = "טוען את הרשימה שלך...",
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
                 }
                 is UiState.Error -> {
-                    ErrorView(
-                        message = s.message,
-                        onRetry = { /* אופציונלי: קריאה לטעינה מחדש */ }
-                    )
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        ErrorView(
+                            message = s.message,
+                            onRetry = { /* אופציונלי: קריאה לטעינה מחדש */ },
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
                 }
                 is UiState.Success -> {
-                    val shoppingItems = s.data
+                    val allItems = s.data
 
-                    if (shoppingItems.isEmpty()) {
-                        Text(
-                            text = "אין פריטים ברשימה. לחצי על ה-+ להוספה",
-                            modifier = Modifier.align(Alignment.Center),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                    // בחירת המוצרים לפי הטאב
+                    val baseItems = if (selectedTab == 0) {
+                        allItems // כל המוצרים
+                    } else {
+                        allItems.filter { it.isChecked } // רק מסומנים
+                    }
+
+                    // סינון הפריטים לפי חיפוש וקטגוריה
+                    val filteredItems = baseItems.filter { item ->
+                        val matchesSearch = if (searchQuery.isBlank()) {
+                            true
+                        } else {
+                            item.title.contains(searchQuery, ignoreCase = true) ||
+                                    item.description.contains(searchQuery, ignoreCase = true)
+                        }
+
+                        val matchesCategory = if (selectedCategory == null) {
+                            true
+                        } else {
+                            item.category == selectedCategory
+                        }
+
+                        matchesSearch && matchesCategory
+                    }
+
+                    // שורת חיפוש
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = ShoplySpacing.medium)
+                            .padding(top = ShoplySpacing.small),
+                        placeholder = { Text("חפש מוצר...") },
+                        leadingIcon = {
+                            Icon(Icons.Default.Search, contentDescription = "חיפוש")
+                        },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(Icons.Default.Clear, contentDescription = "נקה")
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.medium
+                    )
+
+                    Spacer(modifier = Modifier.height(ShoplySpacing.small))
+
+                    // סינון קטגוריות
+                    CategoryChips(
+                        allItems = baseItems, // רק מהקטגוריות הרלוונטיות לטאב
+                        selectedCategory = selectedCategory,
+                        onCategorySelected = { selectedCategory = it }
+                    )
+
+                    Spacer(modifier = Modifier.height(ShoplySpacing.small))
+
+                    // תצוגת הרשימה
+                    if (filteredItems.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            Text(
+                                text = when {
+                                    selectedTab == 1 && baseItems.isEmpty() ->
+                                        "הרשימה שלך ריקה.\nסמני מוצרים מ'כל המוצרים' כדי להוסיף אותם לכאן"
+                                    allItems.isEmpty() ->
+                                        "אין פריטים ברשימה. לחצי על ה-+ להוספה"
+                                    else ->
+                                        "לא נמצאו פריטים התואמים לחיפוש"
+                                },
+                                modifier = Modifier.align(Alignment.Center),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            contentPadding = PaddingValues(ShoplySpacing.medium),
+                            verticalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
                         ) {
-                            items(shoppingItems) { item ->
+                            items(filteredItems) { item ->
                                 ShoplyCard {
                                     ListItem(
                                         headlineContent = {
                                             Text(
                                                 text = item.title,
-                                                style = if (item.isChecked)
-                                                    MaterialTheme.typography.bodyLarge.copy(
-                                                        textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
-                                                    )
-                                                else
-                                                    MaterialTheme.typography.bodyLarge
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                color = if (item.isChecked) {
+                                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                                } else {
+                                                    MaterialTheme.colorScheme.onSurface
+                                                }
                                             )
                                         },
-                                        supportingContent = { Text("${item.quantity} | ${item.category}") },
+                                        supportingContent = {
+                                            Text("${item.quantity} | ${item.category}")
+                                        },
                                         leadingContent = {
                                             Checkbox(
                                                 checked = item.isChecked,
@@ -102,7 +238,9 @@ fun MainScreen(
                                                 )
                                             }
                                         },
-                                        colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent)
+                                        colors = ListItemDefaults.colors(
+                                            containerColor = androidx.compose.ui.graphics.Color.Transparent
+                                        )
                                     )
                                 }
                             }
@@ -112,7 +250,7 @@ fun MainScreen(
             }
         }
 
-        // 1. דיאלוג הוספת פריט
+        // דיאלוג הוספת פריט
         if (showAddDialog) {
             AddItemDialog(
                 onDismiss = { showAddDialog = false },
@@ -123,7 +261,7 @@ fun MainScreen(
             )
         }
 
-        // 2. דיאלוג אישור מחיקה (שימוש בקומפוננטה של אתי)
+        // דיאלוג אישור מחיקה
         itemToDelete?.let { item ->
             ShoplyAlertDialog(
                 title = "מחיקת מוצר",
@@ -140,6 +278,50 @@ fun MainScreen(
     }
 }
 
+/**
+ * קומפוננטת Chips לסינון קטגוריות
+ */
+@Composable
+fun CategoryChips(
+    allItems: List<ShoppingItem>,
+    selectedCategory: String?,
+    onCategorySelected: (String?) -> Unit
+) {
+    // קטגוריות שבאמת קיימות ברשימה
+    val availableCategories = allItems
+        .map { it.category }
+        .distinct()
+        .sorted()
+
+    if (availableCategories.isNotEmpty()) {
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = ShoplySpacing.medium),
+            horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
+        ) {
+            // Chip "הכל"
+            item {
+                FilterChip(
+                    selected = selectedCategory == null,
+                    onClick = { onCategorySelected(null) },
+                    label = { Text("הכל") }
+                )
+            }
+
+            // Chips לכל קטגוריה
+            items(availableCategories) { category ->
+                FilterChip(
+                    selected = selectedCategory == category,
+                    onClick = {
+                        onCategorySelected(if (selectedCategory == category) null else category)
+                    },
+                    label = { Text(category) }
+                )
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddItemDialog(
@@ -150,7 +332,16 @@ fun AddItemDialog(
     var quantity by remember { mutableStateOf("1") }
     var description by remember { mutableStateOf("") }
 
-    val categories = listOf("פירות וירקות", "מוצרי חלב וביצים", "ניקיון והיגיינה", "מאפה ודגנים", "שימורים ומזווה", "בשר ודגים", "מוצרי מקפיא", "אחר")
+    val categories = listOf(
+        "פירות וירקות",
+        "מוצרי חלב וביצים",
+        "ניקיון והיגיינה",
+        "מאפה ודגנים",
+        "שימורים ומזווה",
+        "בשר ודגים",
+        "מוצרי מקפיא",
+        "אחר"
+    )
     var expanded by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf(categories[0]) }
 
@@ -164,14 +355,14 @@ fun AddItemDialog(
                     onValueChange = { name = it },
                     label = "שם המוצר *"
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(ShoplySpacing.small))
 
                 ShoplyTextField(
                     value = quantity,
                     onValueChange = { quantity = it },
                     label = "כמות"
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(ShoplySpacing.medium))
 
                 ExposedDropdownMenuBox(
                     expanded = expanded,
@@ -201,7 +392,7 @@ fun AddItemDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(ShoplySpacing.small))
                 ShoplyTextField(
                     value = description,
                     onValueChange = { description = it },
@@ -212,7 +403,11 @@ fun AddItemDialog(
         confirmButton = {
             ShoplyButton(
                 text = "הוסף",
-                onClick = { if (name.isNotBlank()) onConfirm(name, quantity, description, selectedCategory) }
+                onClick = {
+                    if (name.isNotBlank()) {
+                        onConfirm(name, quantity, description, selectedCategory)
+                    }
+                }
             )
         },
         dismissButton = {
