@@ -7,12 +7,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.shoply.app.ui.screens.LoginScreen
 import com.shoply.app.ui.screens.MainScreen
+import com.shoply.app.viewmodel.AuthViewModel
 import com.shoply.app.viewmodel.ShoppingViewModel
 
 @Composable
-fun NavGraph() { // השם המעודכן של הקובץ שלך
+fun NavGraph() {
     val navController = rememberNavController()
     val shoppingViewModel: ShoppingViewModel = viewModel()
+    val authViewModel: AuthViewModel = viewModel()
 
     NavHost(
         navController = navController,
@@ -21,7 +23,7 @@ fun NavGraph() { // השם המעודכן של הקובץ שלך
         composable("login") {
             LoginScreen(
                 navController = navController,
-                viewModel = shoppingViewModel
+                authViewModel = authViewModel
             )
         }
         composable("main") {

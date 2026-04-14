@@ -8,8 +8,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.shoply.app.ui.theme.ShoplyButtonHeight
-import com.shoply.app.ui.theme.ShoplySpacing
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 
 /**
  * כפתור סטנדרטי של Shoply
@@ -21,6 +21,17 @@ import com.shoply.app.ui.theme.ShoplySpacing
  * @param enabled האם הכפתור פעיל
  * @param size גודל הכפתור (small/medium/large)
  */
+enum class ShoplyButtonSize(val height: Dp) {
+    Small(36.dp),
+    Medium(48.dp),
+    Large(56.dp)
+}
+
+object ShoplySpacing {
+    val small = 8.dp
+    val medium = 16.dp
+}
+
 @Composable
 fun ShoplyButton(
     text: String,
@@ -54,13 +65,4 @@ fun ShoplyButton(
             }
         )
     }
-}
-
-/**
- * גדלי כפתור
- */
-enum class ShoplyButtonSize(val height: androidx.compose.ui.unit.Dp) {
-    Small(ShoplyButtonHeight.small),
-    Medium(ShoplyButtonHeight.medium),
-    Large(ShoplyButtonHeight.large)
 }
