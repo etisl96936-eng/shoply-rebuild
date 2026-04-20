@@ -62,9 +62,9 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
-    LaunchedEffect(authState.isAuthenticated) {
+    LaunchedEffect(authState.isAuthenticated, authState.userRole) {
         if (authState.isAuthenticated) {
-            val route = if (email == "admin") "main/admin" else "main/user"
+            val route = if (authState.userRole == "admin") "main/admin" else "main/user"
 
             navController.navigate(route) {
                 popUpTo("login") { inclusive = true }
@@ -141,7 +141,9 @@ fun LoginScreen(
                     )
 
                     Button(
-                        onClick = { authViewModel.login(email, password) },
+                        onClick = {
+                            authViewModel.login(email, password)
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),
@@ -184,12 +186,20 @@ fun LoginScreen(
                                 val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
                                 authViewModel.loginWithGoogle(googleCredential.idToken)
                             } else {
-                                Toast.makeText(context, "סוג ההתחברות שהתקבל אינו נתמך", Toast.LENGTH_LONG).show()
+                                Toast.makeText(
+                                    context,
+                                    "סוג ההתחברות שהתקבל אינו נתמך",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             }
                         } catch (_: GoogleIdTokenParsingException) {
                             Toast.makeText(context, "שגיאה בקריאת פרטי Google", Toast.LENGTH_LONG).show()
                         } catch (e: Exception) {
-                            Toast.makeText(context, e.localizedMessage ?: "התחברות עם Google נכשלה", Toast.LENGTH_LONG).show()
+                            Toast.makeText(
+                                context,
+                                e.localizedMessage ?: "התחברות עם Google נכשלה",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
                     }
                 },
