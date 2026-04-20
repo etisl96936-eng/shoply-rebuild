@@ -153,11 +153,21 @@ class AuthViewModel : ViewModel() {
     private suspend fun loadUserData(uid: String): Pair<String, String> {
         return try {
             val document = firestore.collection("users").document(uid).get().await()
+
             val role = document.getString("role") ?: "user"
-            val displayName = document.getString("displayName") ?: ""
-            role to displayName
+
+            val firestoreDisplayName = document.getString("displayName")?.trim().orEmpty()
+            val googleDisplayName = auth.currentUser?.displayName?.trim().orEmpty()
+
+            val finalDisplayName = if (firestoreDisplayName.isNotBlank()) {
+                firestoreDisplayName
+            } else {
+                googleDisplayName
+            }
+
+            role to finalDisplayName
         } catch (_: Exception) {
-            "user" to ""
+            "user" to (auth.currentUser?.displayName?.trim().orEmpty())
         }
     }
 }

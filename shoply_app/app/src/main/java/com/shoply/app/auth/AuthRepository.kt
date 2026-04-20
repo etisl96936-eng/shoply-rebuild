@@ -78,8 +78,7 @@ class AuthRepository {
         if (snapshot.exists()) {
             userRef.update(
                 mapOf(
-                    "email" to email,
-                    "displayName" to displayName
+                    "email" to email
                 )
             ).await()
         } else {
