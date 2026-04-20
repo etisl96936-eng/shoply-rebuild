@@ -64,7 +64,9 @@ fun LoginScreen(
 
     LaunchedEffect(authState.isAuthenticated) {
         if (authState.isAuthenticated) {
-            navController.navigate("main") {
+            val route = if (email == "admin") "main/admin" else "main/user"
+
+            navController.navigate(route) {
                 popUpTo("login") { inclusive = true }
             }
         }

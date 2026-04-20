@@ -33,7 +33,8 @@ import androidx.compose.material3.IconButton
 @Composable
 fun MainScreen(
     navController: NavHostController,
-    viewModel: ShoppingViewModel
+    viewModel: ShoppingViewModel,
+    isAdmin: Boolean = false
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -241,12 +242,14 @@ fun MainScreen(
                                             )
                                         },
                                         trailingContent = {
-                                            IconButton(onClick = { itemToDelete = item }) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Delete,
-                                                    contentDescription = "מחק",
-                                                    tint = MaterialTheme.colorScheme.error
-                                                )
+                                            if (isAdmin && selectedTab == 0) {
+                                                IconButton(onClick = { itemToDelete = item }) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Delete,
+                                                        contentDescription = "מחק",
+                                                        tint = MaterialTheme.colorScheme.error
+                                                    )
+                                                }
                                             }
                                         },
                                         colors = ListItemDefaults.colors(

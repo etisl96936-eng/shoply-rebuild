@@ -28,10 +28,19 @@ fun NavGraph() {
             )
         }
 
-        composable("main") {
+        composable("main/user") {
             MainScreen(
                 navController = navController,
-                viewModel = shoppingViewModel
+                viewModel = shoppingViewModel,
+                isAdmin = false
+            )
+        }
+
+        composable("main/admin") {
+            MainScreen(
+                navController = navController,
+                viewModel = shoppingViewModel,
+                isAdmin = true
             )
         }
 
