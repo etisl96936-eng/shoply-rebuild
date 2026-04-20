@@ -7,6 +7,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.shoply.app.ui.screens.LoginScreen
 import com.shoply.app.ui.screens.MainScreen
+import com.shoply.app.ui.screens.ProfileScreen
 import com.shoply.app.viewmodel.AuthViewModel
 import com.shoply.app.viewmodel.ShoppingViewModel
 
@@ -26,10 +27,17 @@ fun NavGraph() {
                 authViewModel = authViewModel
             )
         }
+
         composable("main") {
             MainScreen(
                 navController = navController,
                 viewModel = shoppingViewModel
+            )
+        }
+
+        composable("profile") {
+            ProfileScreen(
+                navController = navController
             )
         }
     }

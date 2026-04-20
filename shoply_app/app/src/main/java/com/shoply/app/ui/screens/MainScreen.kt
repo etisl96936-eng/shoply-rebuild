@@ -25,6 +25,9 @@ import com.shoply.app.viewmodel.ShoppingViewModel
 import com.shoply.app.data.ShoppingItem
 import com.shoply.app.ui.components.*
 import com.shoply.app.ui.theme.ShoplySpacing
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,6 +56,14 @@ fun MainScreen(
                         if (selectedTab == 0) "Shoply - כל המוצרים"
                         else "Shoply - הרשימה שלי"
                     )
+                },
+                actions = {
+                    IconButton(onClick = { navController.navigate("profile") }) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "פרופיל"
+                        )
+                    }
                 }
             )
         },
