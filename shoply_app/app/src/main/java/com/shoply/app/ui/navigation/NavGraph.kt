@@ -35,6 +35,7 @@ fun NavGraph() {
             MainScreen(
                 navController = navController,
                 viewModel = shoppingViewModel,
+                authViewModel = authViewModel,
                 isAdmin = false,
                 displayName = authState.displayName
             )
@@ -44,6 +45,7 @@ fun NavGraph() {
             MainScreen(
                 navController = navController,
                 viewModel = shoppingViewModel,
+                authViewModel = authViewModel,
                 isAdmin = true,
                 displayName = authState.displayName
             )

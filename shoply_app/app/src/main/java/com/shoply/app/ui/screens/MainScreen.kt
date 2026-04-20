@@ -28,20 +28,25 @@ import com.shoply.app.ui.theme.ShoplySpacing
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.filled.Logout
+import com.shoply.app.viewmodel.AuthViewModel
+import androidx.compose.material.icons.filled.Logout
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
-navController: NavHostController,
-viewModel: ShoppingViewModel,
-isAdmin: Boolean = false,
-displayName: String = ""
+    navController: NavHostController,
+    viewModel: ShoppingViewModel,
+    authViewModel: AuthViewModel,
+    isAdmin: Boolean = false,
+    displayName: String = ""
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     // מצבי ניהול הדיאלוגים
     var showAddDialog by remember { mutableStateOf(false) }
     var itemToDelete by remember { mutableStateOf<ShoppingItem?>(null) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
     // חיפוש וסינון
     var searchQuery by remember { mutableStateOf("") }
@@ -67,6 +72,13 @@ displayName: String = ""
                         Icon(
                             imageVector = Icons.Default.Person,
                             contentDescription = "פרופיל"
+                        )
+                    }
+
+                    IconButton(onClick = { showLogoutDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Logout,
+                            contentDescription = "התנתקות"
                         )
                     }
                 }
@@ -291,6 +303,25 @@ displayName: String = ""
                     itemToDelete = null
                 },
                 onDismiss = { itemToDelete = null }
+            )
+        }
+
+        if (showLogoutDialog) {
+            ShoplyAlertDialog(
+                title = "התנתקות",
+                message = "האם את מעוניינת לצאת מ-Shoply?",
+                confirmText = "כן",
+                dismissText = "לא",
+                onConfirm = {
+                    showLogoutDialog = false
+                    authViewModel.logout()
+                    navController.navigate("login") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onDismiss = {
+                    showLogoutDialog = false
+                }
             )
         }
     }
