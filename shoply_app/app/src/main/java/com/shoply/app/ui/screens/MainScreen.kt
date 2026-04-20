@@ -32,9 +32,10 @@ import androidx.compose.material3.IconButton
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
-    navController: NavHostController,
-    viewModel: ShoppingViewModel,
-    isAdmin: Boolean = false
+navController: NavHostController,
+viewModel: ShoppingViewModel,
+isAdmin: Boolean = false,
+displayName: String = ""
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -53,10 +54,13 @@ fun MainScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        if (selectedTab == 0) "Shoply - כל המוצרים"
-                        else "Shoply - הרשימה שלי"
-                    )
+                    val title = if (displayName.isNotBlank()) {
+                        "Shoply - $displayName"
+                    } else {
+                        "Shoply"
+                    }
+
+                    Text(title)
                 },
                 actions = {
                     IconButton(onClick = { navController.navigate("profile") }) {

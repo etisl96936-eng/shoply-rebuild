@@ -28,12 +28,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.shoply.app.ui.components.ShoplyTextField
+import com.shoply.app.viewmodel.AuthViewModel
 import com.shoply.app.viewmodel.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     navController: NavHostController,
+    authViewModel: AuthViewModel,
     viewModel: ProfileViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -61,8 +63,10 @@ fun ProfileScreen(
 
     LaunchedEffect(state.successMessage) {
         state.successMessage?.let {
+            authViewModel.refreshUserData()
             Toast.makeText(context, it, Toast.LENGTH_LONG).show()
             viewModel.clearMessage()
+            navController.popBackStack()
         }
     }
 

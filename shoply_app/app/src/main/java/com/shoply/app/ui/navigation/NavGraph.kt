@@ -10,12 +10,15 @@ import com.shoply.app.ui.screens.MainScreen
 import com.shoply.app.ui.screens.ProfileScreen
 import com.shoply.app.viewmodel.AuthViewModel
 import com.shoply.app.viewmodel.ShoppingViewModel
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun NavGraph() {
     val navController = rememberNavController()
     val shoppingViewModel: ShoppingViewModel = viewModel()
     val authViewModel: AuthViewModel = viewModel()
+    val authState by authViewModel.uiState.collectAsStateWithLifecycle()
 
     NavHost(
         navController = navController,
@@ -32,7 +35,8 @@ fun NavGraph() {
             MainScreen(
                 navController = navController,
                 viewModel = shoppingViewModel,
-                isAdmin = false
+                isAdmin = false,
+                displayName = authState.displayName
             )
         }
 
@@ -40,13 +44,15 @@ fun NavGraph() {
             MainScreen(
                 navController = navController,
                 viewModel = shoppingViewModel,
-                isAdmin = true
+                isAdmin = true,
+                displayName = authState.displayName
             )
         }
 
         composable("profile") {
             ProfileScreen(
-                navController = navController
+                navController = navController,
+                authViewModel = authViewModel
             )
         }
     }

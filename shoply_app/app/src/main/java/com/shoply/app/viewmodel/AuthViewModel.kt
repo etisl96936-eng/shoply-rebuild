@@ -18,7 +18,8 @@ data class AuthUiState(
     val isAuthenticated: Boolean = false,
     val userSession: UserSession? = null,
     val errorMessage: String? = null,
-    val userRole: String = "user"
+    val userRole: String = "user",
+    val displayName: String = ""
 )
 
 class AuthViewModel : ViewModel() {
@@ -46,16 +47,17 @@ class AuthViewModel : ViewModel() {
             val result = runCatching {
                 val session = repository.loadCurrentUserSession()
                 val uid = auth.currentUser?.uid.orEmpty()
-                val role = if (uid.isNotBlank()) loadUserRole(uid) else "user"
-                session to role
+                val (role, displayName) = if (uid.isNotBlank()) loadUserData(uid) else ("user" to "")
+                Triple(session, role, displayName)
             }
 
-            result.onSuccess { (session, role) ->
+            result.onSuccess { (session, role, displayName) ->
                 _uiState.value = AuthUiState(
                     isLoading = false,
                     isAuthenticated = true,
                     userSession = session,
-                    userRole = role
+                    userRole = role,
+                    displayName = displayName
                 )
             }.onFailure { error ->
                 _uiState.value = AuthUiState(
@@ -91,13 +93,14 @@ class AuthViewModel : ViewModel() {
             repository.login(trimmedEmail, trimmedPassword)
                 .onSuccess { session ->
                     val uid = auth.currentUser?.uid.orEmpty()
-                    val role = if (uid.isNotBlank()) loadUserRole(uid) else "user"
+                    val (role, displayName) = if (uid.isNotBlank()) loadUserData(uid) else ("user" to "")
 
                     _uiState.value = AuthUiState(
                         isLoading = false,
                         isAuthenticated = true,
                         userSession = session,
-                        userRole = role
+                        userRole = role,
+                        displayName = displayName
                     )
                 }
                 .onFailure { error ->
@@ -116,13 +119,14 @@ class AuthViewModel : ViewModel() {
             repository.loginWithGoogle(idToken)
                 .onSuccess { session ->
                     val uid = auth.currentUser?.uid.orEmpty()
-                    val role = if (uid.isNotBlank()) loadUserRole(uid) else "user"
+                    val (role, displayName) = if (uid.isNotBlank()) loadUserData(uid) else ("user" to "")
 
                     _uiState.value = AuthUiState(
                         isLoading = false,
                         isAuthenticated = true,
                         userSession = session,
-                        userRole = role
+                        userRole = role,
+                        displayName = displayName
                     )
                 }
                 .onFailure { error ->
@@ -132,6 +136,9 @@ class AuthViewModel : ViewModel() {
                     )
                 }
         }
+    }
+    fun refreshUserData() {
+        checkExistingSession()
     }
 
     fun clearError() {
@@ -143,12 +150,14 @@ class AuthViewModel : ViewModel() {
         _uiState.value = AuthUiState()
     }
 
-    private suspend fun loadUserRole(uid: String): String {
+    private suspend fun loadUserData(uid: String): Pair<String, String> {
         return try {
             val document = firestore.collection("users").document(uid).get().await()
-            document.getString("role") ?: "user"
+            val role = document.getString("role") ?: "user"
+            val displayName = document.getString("displayName") ?: ""
+            role to displayName
         } catch (_: Exception) {
-            "user"
+            "user" to ""
         }
     }
 }
