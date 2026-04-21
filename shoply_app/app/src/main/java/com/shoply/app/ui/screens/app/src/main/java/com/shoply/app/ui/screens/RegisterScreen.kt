@@ -12,12 +12,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -25,7 +25,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,41 +32,46 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.credentials.CredentialManager
-import androidx.credentials.CustomCredential
-import androidx.credentials.GetCredentialRequest
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
-import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
-import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.shoply.app.ui.components.ShoplyButton
 import com.shoply.app.ui.components.ShoplyButtonSize
 import com.shoply.app.ui.components.ShoplyTextField
-import com.shoply.app.ui.theme.ShoplyButtonHeight
 import com.shoply.app.ui.theme.ShoplyResponsive
 import com.shoply.app.ui.theme.ShoplySpacing
 import com.shoply.app.ui.theme.rememberShoplyWindowSize
 import com.shoply.app.viewmodel.AuthViewModel
-import kotlinx.coroutines.launch
 
+/**
+ * מסך הרשמה למשתמשים חדשים
+ * אבן דרך 5.3 - Avigail
+ *
+ * כולל שדות: שם תצוגה, אימייל, סיסמה, אימות סיסמה
+ * תומך ב-Responsive Design ובולידציות מלאות
+ */
 @Composable
-fun LoginScreen(
+fun RegisterScreen(
     navController: NavHostController,
     authViewModel: AuthViewModel,
     activity: Activity
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val authState by authViewModel.uiState.collectAsStateWithLifecycle()
 
     // אבן דרך 4.3 - Responsive Design
     val windowSize = rememberShoplyWindowSize(activity)
     val maxWidth = ShoplyResponsive.maxContentWidth(windowSize)
 
+    var displayName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
 
+    // ולידציות UI מקומיות (לצביעת שדות באדום)
+    val passwordsMismatch = confirmPassword.isNotEmpty() && password != confirmPassword
+    val passwordTooShort = password.isNotEmpty() && password.length < 6
+
+    // אחרי הרשמה מוצלחת - מעבר למסך הראשי
     LaunchedEffect(authState.isAuthenticated, authState.userRole) {
         if (authState.isAuthenticated) {
             val route = if (authState.userRole == "admin") "main/admin" else "main/user"
@@ -78,6 +82,7 @@ fun LoginScreen(
         }
     }
 
+    // הצגת שגיאות מ-ViewModel
     LaunchedEffect(authState.errorMessage) {
         authState.errorMessage?.let {
             Toast.makeText(context, it, Toast.LENGTH_LONG).show()
@@ -89,12 +94,14 @@ fun LoginScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = ShoplyResponsive.screenPadding(windowSize))
+            .verticalScroll(rememberScrollState())
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .widthIn(max = maxWidth)
-                .align(Alignment.Center),
+                .align(Alignment.Center)
+                .padding(vertical = ShoplySpacing.large),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -106,7 +113,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(ShoplySpacing.small))
 
             Text(
-                text = "כניסה לרשימת הקניות",
+                text = "יצירת חשבון חדש",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -127,6 +134,16 @@ fun LoginScreen(
                     verticalArrangement = Arrangement.spacedBy(ShoplySpacing.medium)
                 ) {
                     ShoplyTextField(
+                        value = displayName,
+                        onValueChange = {
+                            displayName = it
+                            authViewModel.clearError()
+                        },
+                        label = "שם תצוגה",
+                        keyboardType = KeyboardType.Text
+                    )
+
+                    ShoplyTextField(
                         value = email,
                         onValueChange = {
                             email = it
@@ -144,12 +161,44 @@ fun LoginScreen(
                         },
                         label = "סיסמה",
                         keyboardType = KeyboardType.Password,
-                        isPassword = true
+                        isPassword = true,
+                        isError = passwordTooShort,
+                        supportingText = if (passwordTooShort) {
+                            "סיסמה חייבת להיות באורך 6 תווים לפחות"
+                        } else {
+                            "לפחות 6 תווים"
+                        }
                     )
 
+                    ShoplyTextField(
+                        value = confirmPassword,
+                        onValueChange = {
+                            confirmPassword = it
+                            authViewModel.clearError()
+                        },
+                        label = "אימות סיסמה",
+                        keyboardType = KeyboardType.Password,
+                        isPassword = true,
+                        isError = passwordsMismatch,
+                        supportingText = if (passwordsMismatch) {
+                            "הסיסמאות אינן תואמות"
+                        } else {
+                            null
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(ShoplySpacing.small))
+
                     ShoplyButton(
-                        text = "התחבר",
-                        onClick = { authViewModel.login(email, password) },
+                        text = "הירשם",
+                        onClick = {
+                            authViewModel.register(
+                                email = email,
+                                password = password,
+                                confirmPassword = confirmPassword,
+                                displayName = displayName
+                            )
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !authState.isLoading,
                         size = ShoplyButtonSize.Large
@@ -159,81 +208,15 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(ShoplySpacing.medium))
 
-            OutlinedButton(
-                onClick = {
-                    scope.launch {
-                        try {
-                            val googleIdOption = GetGoogleIdOption.Builder()
-                                .setFilterByAuthorizedAccounts(false)
-                                .setServerClientId(context.getString(com.shoply.app.R.string.default_web_client_id))
-                                .setAutoSelectEnabled(false)
-                                .build()
-
-                            val request = GetCredentialRequest.Builder()
-                                .addCredentialOption(googleIdOption)
-                                .build()
-
-                            val credentialManager = CredentialManager.create(context)
-                            val result = credentialManager.getCredential(
-                                context = context,
-                                request = request
-                            )
-
-                            val credential = result.credential
-                            if (
-                                credential is CustomCredential &&
-                                credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
-                            ) {
-                                val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                                authViewModel.loginWithGoogle(googleCredential.idToken)
-                            } else {
-                                Toast.makeText(
-                                    context,
-                                    "סוג ההתחברות שהתקבל אינו נתמך",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
-                        } catch (_: GoogleIdTokenParsingException) {
-                            Toast.makeText(context, "שגיאה בקריאת פרטי Google", Toast.LENGTH_LONG).show()
-                        } catch (e: Exception) {
-                            Toast.makeText(
-                                context,
-                                e.localizedMessage ?: "התחברות עם Google נכשלה",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(ShoplyButtonHeight.large),
-                enabled = !authState.isLoading,
-                shape = MaterialTheme.shapes.medium
-            ) {
-                Text(
-                    text = "התחברות עם Google",
-                    style = MaterialTheme.typography.labelLarge
-                )
-            }
-
-            Spacer(modifier = Modifier.height(ShoplySpacing.small))
-
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outline,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(ShoplySpacing.small))
-
-            // אבן דרך 5.3 - מעבר למסך הרשמה
+            // חזרה למסך הכניסה
             TextButton(
                 onClick = {
                     authViewModel.clearError()
-                    navController.navigate("register")
+                    navController.popBackStack()
                 }
             ) {
                 Text(
-                    text = "משתמש חדש? המשך למסך הרשמה",
+                    text = "יש לך כבר חשבון? חזרה להתחברות",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary
                 )

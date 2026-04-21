@@ -9,6 +9,7 @@ import androidx.navigation.compose.rememberNavController
 import com.shoply.app.ui.screens.LoginScreen
 import com.shoply.app.ui.screens.MainScreen
 import com.shoply.app.ui.screens.ProfileScreen
+import com.shoply.app.ui.screens.RegisterScreen
 import com.shoply.app.viewmodel.AuthViewModel
 import com.shoply.app.viewmodel.ShoppingViewModel
 import androidx.compose.runtime.getValue
@@ -19,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
  * אבן דרך 1.3 - Avigail
  *
  * עודכן באבן דרך 4.3 לתמיכה ב-Responsive Design (העברת Activity למסכים)
+ * עודכן באבן דרך 5.3 - הוספת מסך Register
  */
 @Composable
 fun NavGraph(activity: Activity) {
@@ -33,6 +35,14 @@ fun NavGraph(activity: Activity) {
     ) {
         composable("login") {
             LoginScreen(
+                navController = navController,
+                authViewModel = authViewModel,
+                activity = activity
+            )
+        }
+
+        composable("register") {
+            RegisterScreen(
                 navController = navController,
                 authViewModel = authViewModel,
                 activity = activity

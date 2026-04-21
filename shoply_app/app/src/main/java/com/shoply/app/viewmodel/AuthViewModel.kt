@@ -112,6 +112,77 @@ class AuthViewModel : ViewModel() {
         }
     }
 
+    /**
+     * אבן דרך 5.3 - הרשמת משתמש חדש
+     * כוללת ולידציות: מייל תקין, סיסמה באורך 6+, אימות סיסמה, שם תצוגה
+     */
+    fun register(
+        email: String,
+        password: String,
+        confirmPassword: String,
+        displayName: String
+    ) {
+        val trimmedEmail = email.trim()
+        val trimmedPassword = password.trim()
+        val trimmedConfirm = confirmPassword.trim()
+        val trimmedName = displayName.trim()
+
+        when {
+            trimmedName.isBlank() -> {
+                _uiState.value = _uiState.value.copy(errorMessage = "חובה להזין שם תצוגה")
+                return
+            }
+            trimmedName.length < 2 -> {
+                _uiState.value = _uiState.value.copy(errorMessage = "שם תצוגה קצר מדי (לפחות 2 תווים)")
+                return
+            }
+            trimmedEmail.isBlank() -> {
+                _uiState.value = _uiState.value.copy(errorMessage = "חובה להזין אימייל")
+                return
+            }
+            !Patterns.EMAIL_ADDRESS.matcher(trimmedEmail).matches() -> {
+                _uiState.value = _uiState.value.copy(errorMessage = "אימייל לא תקין")
+                return
+            }
+            trimmedPassword.isBlank() -> {
+                _uiState.value = _uiState.value.copy(errorMessage = "חובה להזין סיסמה")
+                return
+            }
+            trimmedPassword.length < 6 -> {
+                _uiState.value = _uiState.value.copy(errorMessage = "סיסמה חייבת להיות באורך של 6 תווים לפחות")
+                return
+            }
+            trimmedPassword != trimmedConfirm -> {
+                _uiState.value = _uiState.value.copy(errorMessage = "הסיסמאות אינן תואמות")
+                return
+            }
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+
+            repository.register(trimmedEmail, trimmedPassword, trimmedName)
+                .onSuccess { session ->
+                    val uid = auth.currentUser?.uid.orEmpty()
+                    val (role, loadedName) = if (uid.isNotBlank()) loadUserData(uid) else ("user" to trimmedName)
+
+                    _uiState.value = AuthUiState(
+                        isLoading = false,
+                        isAuthenticated = true,
+                        userSession = session,
+                        userRole = role,
+                        displayName = loadedName.ifBlank { trimmedName }
+                    )
+                }
+                .onFailure { error ->
+                    _uiState.value = AuthUiState(
+                        isLoading = false,
+                        errorMessage = error.localizedMessage ?: "הרשמה נכשלה"
+                    )
+                }
+        }
+    }
+
     fun loginWithGoogle(idToken: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
@@ -137,6 +208,7 @@ class AuthViewModel : ViewModel() {
                 }
         }
     }
+
     fun refreshUserData() {
         checkExistingSession()
     }
@@ -153,21 +225,11 @@ class AuthViewModel : ViewModel() {
     private suspend fun loadUserData(uid: String): Pair<String, String> {
         return try {
             val document = firestore.collection("users").document(uid).get().await()
-
             val role = document.getString("role") ?: "user"
-
-            val firestoreDisplayName = document.getString("displayName")?.trim().orEmpty()
-            val googleDisplayName = auth.currentUser?.displayName?.trim().orEmpty()
-
-            val finalDisplayName = if (firestoreDisplayName.isNotBlank()) {
-                firestoreDisplayName
-            } else {
-                googleDisplayName
-            }
-
-            role to finalDisplayName
+            val displayName = document.getString("displayName") ?: ""
+            role to displayName
         } catch (_: Exception) {
-            "user" to (auth.currentUser?.displayName?.trim().orEmpty())
+            "user" to ""
         }
     }
 }
