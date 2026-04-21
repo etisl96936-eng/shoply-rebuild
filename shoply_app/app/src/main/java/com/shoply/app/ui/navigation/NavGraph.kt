@@ -1,5 +1,6 @@
 package com.shoply.app.ui.navigation
 
+import android.app.Activity
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -13,8 +14,14 @@ import com.shoply.app.viewmodel.ShoppingViewModel
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
+/**
+ * NavGraph - ניהול ניווט ראשי של האפליקציה
+ * אבן דרך 1.3 - Avigail
+ *
+ * עודכן באבן דרך 4.3 לתמיכה ב-Responsive Design (העברת Activity למסכים)
+ */
 @Composable
-fun NavGraph() {
+fun NavGraph(activity: Activity) {
     val navController = rememberNavController()
     val shoppingViewModel: ShoppingViewModel = viewModel()
     val authViewModel: AuthViewModel = viewModel()
@@ -27,7 +34,8 @@ fun NavGraph() {
         composable("login") {
             LoginScreen(
                 navController = navController,
-                authViewModel = authViewModel
+                authViewModel = authViewModel,
+                activity = activity
             )
         }
 
@@ -37,7 +45,8 @@ fun NavGraph() {
                 viewModel = shoppingViewModel,
                 authViewModel = authViewModel,
                 isAdmin = false,
-                displayName = authState.displayName
+                displayName = authState.displayName,
+                activity = activity
             )
         }
 
@@ -47,14 +56,16 @@ fun NavGraph() {
                 viewModel = shoppingViewModel,
                 authViewModel = authViewModel,
                 isAdmin = true,
-                displayName = authState.displayName
+                displayName = authState.displayName,
+                activity = activity
             )
         }
 
         composable("profile") {
             ProfileScreen(
                 navController = navController,
-                authViewModel = authViewModel
+                authViewModel = authViewModel,
+                activity = activity
             )
         }
     }

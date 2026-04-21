@@ -1,5 +1,6 @@
 package com.shoply.app.ui.screens
 
+import android.app.Activity
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -29,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
@@ -41,19 +44,25 @@ import com.shoply.app.ui.components.ShoplyButton
 import com.shoply.app.ui.components.ShoplyButtonSize
 import com.shoply.app.ui.components.ShoplyTextField
 import com.shoply.app.ui.theme.ShoplyButtonHeight
+import com.shoply.app.ui.theme.ShoplyResponsive
 import com.shoply.app.ui.theme.ShoplySpacing
+import com.shoply.app.ui.theme.rememberShoplyWindowSize
 import com.shoply.app.viewmodel.AuthViewModel
 import kotlinx.coroutines.launch
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun LoginScreen(
     navController: NavHostController,
-    authViewModel: AuthViewModel
+    authViewModel: AuthViewModel,
+    activity: Activity
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val authState by authViewModel.uiState.collectAsStateWithLifecycle()
+
+    // אבן דרך 4.3 - Responsive Design
+    val windowSize = rememberShoplyWindowSize(activity)
+    val maxWidth = ShoplyResponsive.maxContentWidth(windowSize)
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -78,11 +87,12 @@ fun LoginScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = ShoplySpacing.large)
+            .padding(horizontal = ShoplyResponsive.screenPadding(windowSize))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .widthIn(max = maxWidth)
                 .align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {

@@ -1,5 +1,6 @@
 package com.shoply.app.ui.screens
 
+import android.app.Activity
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
@@ -20,6 +22,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -28,7 +31,9 @@ import androidx.navigation.NavHostController
 import com.shoply.app.ui.components.ShoplyButton
 import com.shoply.app.ui.components.ShoplyButtonSize
 import com.shoply.app.ui.components.ShoplyTextField
+import com.shoply.app.ui.theme.ShoplyResponsive
 import com.shoply.app.ui.theme.ShoplySpacing
+import com.shoply.app.ui.theme.rememberShoplyWindowSize
 import com.shoply.app.viewmodel.AuthViewModel
 import com.shoply.app.viewmodel.ProfileViewModel
 
@@ -37,10 +42,15 @@ import com.shoply.app.viewmodel.ProfileViewModel
 fun ProfileScreen(
     navController: NavHostController,
     authViewModel: AuthViewModel,
+    activity: Activity,
     viewModel: ProfileViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // אבן דרך 4.3 - Responsive Design
+    val windowSize = rememberShoplyWindowSize(activity)
+    val maxWidth = ShoplyResponsive.maxContentWidth(windowSize)
 
     val stores = listOf(
         "שופרסל",
@@ -98,53 +108,60 @@ fun ProfileScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .padding(ShoplySpacing.medium),
-                verticalArrangement = Arrangement.spacedBy(ShoplySpacing.medium)
+                    .padding(padding),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                ShoplyTextField(
-                    value = state.profile.displayName,
-                    onValueChange = { viewModel.updateDisplayName(it) },
-                    label = "שם תצוגה"
-                )
-
-                ShoplyTextField(
-                    value = state.profile.email,
-                    onValueChange = {},
-                    label = "אימייל"
-                )
-
-                Text(
-                    text = "בחרי עד 3 סופרים מועדפים",
-                    style = MaterialTheme.typography.titleMedium
-                )
-
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = ShoplySpacing.extraSmall),
-                    horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = maxWidth)
+                        .padding(ShoplyResponsive.screenPadding(windowSize)),
+                    verticalArrangement = Arrangement.spacedBy(ShoplySpacing.medium)
                 ) {
-                    items(stores) { store ->
-                        FilterChip(
-                            selected = state.profile.preferredStores.contains(store),
-                            onClick = { viewModel.toggleStore(store) },
-                            label = { Text(store) }
-                        )
+                    ShoplyTextField(
+                        value = state.profile.displayName,
+                        onValueChange = { viewModel.updateDisplayName(it) },
+                        label = "שם תצוגה"
+                    )
+
+                    ShoplyTextField(
+                        value = state.profile.email,
+                        onValueChange = {},
+                        label = "אימייל"
+                    )
+
+                    Text(
+                        text = "בחרי עד 3 סופרים מועדפים",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = ShoplySpacing.extraSmall),
+                        horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
+                    ) {
+                        items(stores) { store ->
+                            FilterChip(
+                                selected = state.profile.preferredStores.contains(store),
+                                onClick = { viewModel.toggleStore(store) },
+                                label = { Text(store) }
+                            )
+                        }
                     }
+
+                    Text(
+                        text = "נבחרו: ${state.profile.preferredStores.size}/3",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    ShoplyButton(
+                        text = if (state.isSaving) "שומר..." else "שמור",
+                        onClick = { viewModel.saveProfile() },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.isSaving,
+                        size = ShoplyButtonSize.Large
+                    )
                 }
-
-                Text(
-                    text = "נבחרו: ${state.profile.preferredStores.size}/3",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-
-                ShoplyButton(
-                    text = if (state.isSaving) "שומר..." else "שמור",
-                    onClick = { viewModel.saveProfile() },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.isSaving,
-                    size = ShoplyButtonSize.Large
-                )
             }
         }
     }

@@ -1,8 +1,12 @@
 package com.shoply.app.ui.screens
 
+import android.app.Activity
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -24,13 +28,14 @@ import com.shoply.app.ui.state.UiState
 import com.shoply.app.viewmodel.ShoppingViewModel
 import com.shoply.app.data.ShoppingItem
 import com.shoply.app.ui.components.*
+import com.shoply.app.ui.theme.ShoplyResponsive
 import com.shoply.app.ui.theme.ShoplySpacing
+import com.shoply.app.ui.theme.rememberShoplyWindowSize
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.filled.Logout
 import com.shoply.app.viewmodel.AuthViewModel
-import androidx.compose.material.icons.filled.Logout
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,9 +44,14 @@ fun MainScreen(
     viewModel: ShoppingViewModel,
     authViewModel: AuthViewModel,
     isAdmin: Boolean = false,
-    displayName: String = ""
+    displayName: String = "",
+    activity: Activity
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // אבן דרך 4.3 - Responsive Design
+    val windowSize = rememberShoplyWindowSize(activity)
+    val gridColumns = ShoplyResponsive.gridColumns(windowSize)
 
     // מצבי ניהול הדיאלוגים
     var showAddDialog by remember { mutableStateOf(false) }
@@ -229,48 +239,39 @@ fun MainScreen(
                             )
                         }
                     } else {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(ShoplySpacing.medium),
-                            verticalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
-                        ) {
-                            items(filteredItems) { item ->
-                                ShoplyCard {
-                                    ListItem(
-                                        headlineContent = {
-                                            Text(
-                                                text = item.title,
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                color = if (item.isChecked) {
-                                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                                } else {
-                                                    MaterialTheme.colorScheme.onSurface
-                                                }
-                                            )
-                                        },
-                                        supportingContent = {
-                                            Text("${item.quantity} | ${item.category}")
-                                        },
-                                        leadingContent = {
-                                            Checkbox(
-                                                checked = item.isChecked,
-                                                onCheckedChange = { viewModel.toggleItemChecked(item) }
-                                            )
-                                        },
-                                        trailingContent = {
-                                            if (isAdmin && selectedTab == 0) {
-                                                IconButton(onClick = { itemToDelete = item }) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.Delete,
-                                                        contentDescription = "מחק",
-                                                        tint = MaterialTheme.colorScheme.error
-                                                    )
-                                                }
-                                            }
-                                        },
-                                        colors = ListItemDefaults.colors(
-                                            containerColor = androidx.compose.ui.graphics.Color.Transparent
-                                        )
+                        // אבן דרך 4.3 - בטלפון (Compact) מציגים רשימה רגילה,
+                        // בטאבלט (Medium/Expanded) מציגים רשת של 2-3 עמודות
+                        if (windowSize.isCompact) {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(ShoplySpacing.medium),
+                                verticalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
+                            ) {
+                                items(filteredItems) { item ->
+                                    ShoppingItemCard(
+                                        item = item,
+                                        isAdmin = isAdmin,
+                                        selectedTab = selectedTab,
+                                        onToggleChecked = { viewModel.toggleItemChecked(item) },
+                                        onDelete = { itemToDelete = item }
+                                    )
+                                }
+                            }
+                        } else {
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(gridColumns),
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(ShoplySpacing.medium),
+                                verticalArrangement = Arrangement.spacedBy(ShoplySpacing.small),
+                                horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
+                            ) {
+                                items(filteredItems, key = { it.id }) { item ->
+                                    ShoppingItemCard(
+                                        item = item,
+                                        isAdmin = isAdmin,
+                                        selectedTab = selectedTab,
+                                        onToggleChecked = { viewModel.toggleItemChecked(item) },
+                                        onDelete = { itemToDelete = item }
                                     )
                                 }
                             }
@@ -324,6 +325,57 @@ fun MainScreen(
                 }
             )
         }
+    }
+}
+
+/**
+ * כרטיס פריט בודד - משותף ל-LazyColumn וגם ל-LazyVerticalGrid
+ */
+@Composable
+private fun ShoppingItemCard(
+    item: ShoppingItem,
+    isAdmin: Boolean,
+    selectedTab: Int,
+    onToggleChecked: () -> Unit,
+    onDelete: () -> Unit
+) {
+    ShoplyCard {
+        ListItem(
+            headlineContent = {
+                Text(
+                    text = item.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (item.isChecked) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    }
+                )
+            },
+            supportingContent = {
+                Text("${item.quantity} | ${item.category}")
+            },
+            leadingContent = {
+                Checkbox(
+                    checked = item.isChecked,
+                    onCheckedChange = { onToggleChecked() }
+                )
+            },
+            trailingContent = {
+                if (isAdmin && selectedTab == 0) {
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "מחק",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            },
+            colors = ListItemDefaults.colors(
+                containerColor = androidx.compose.ui.graphics.Color.Transparent
+            )
+        )
     }
 }
 
