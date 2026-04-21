@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -23,11 +22,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.shoply.app.ui.components.ShoplyButton
+import com.shoply.app.ui.components.ShoplyButtonSize
 import com.shoply.app.ui.components.ShoplyTextField
+import com.shoply.app.ui.theme.ShoplySpacing
 import com.shoply.app.viewmodel.AuthViewModel
 import com.shoply.app.viewmodel.ProfileViewModel
 
@@ -89,15 +90,17 @@ fun ProfileScreen(
                     .padding(padding),
                 verticalArrangement = Arrangement.Center
             ) {
-                CircularProgressIndicator(modifier = Modifier.padding(16.dp))
+                CircularProgressIndicator(
+                    modifier = Modifier.padding(ShoplySpacing.medium)
+                )
             }
         } else {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(ShoplySpacing.medium),
+                verticalArrangement = Arrangement.spacedBy(ShoplySpacing.medium)
             ) {
                 ShoplyTextField(
                     value = state.profile.displayName,
@@ -118,8 +121,8 @@ fun ProfileScreen(
 
                 LazyRow(
                     modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    contentPadding = PaddingValues(horizontal = ShoplySpacing.extraSmall),
+                    horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
                 ) {
                     items(stores) { store ->
                         FilterChip(
@@ -135,13 +138,13 @@ fun ProfileScreen(
                     style = MaterialTheme.typography.bodyMedium
                 )
 
-                Button(
+                ShoplyButton(
+                    text = if (state.isSaving) "שומר..." else "שמור",
                     onClick = { viewModel.saveProfile() },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.isSaving
-                ) {
-                    Text(if (state.isSaving) "שומר..." else "שמור")
-                }
+                    enabled = !state.isSaving,
+                    size = ShoplyButtonSize.Large
+                )
             }
         }
     }
