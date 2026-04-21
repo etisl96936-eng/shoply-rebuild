@@ -10,9 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -32,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
@@ -41,14 +37,14 @@ import androidx.navigation.NavHostController
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import com.shoply.app.ui.components.ShoplyButton
+import com.shoply.app.ui.components.ShoplyButtonSize
 import com.shoply.app.ui.components.ShoplyTextField
-import com.shoply.app.ui.theme.Gray300
-import com.shoply.app.ui.theme.Gray600
-import com.shoply.app.ui.theme.ShoplyGreen
-import com.shoply.app.ui.theme.ShoplyGreenLight
+import com.shoply.app.ui.theme.ShoplyButtonHeight
 import com.shoply.app.ui.theme.ShoplySpacing
 import com.shoply.app.viewmodel.AuthViewModel
 import kotlinx.coroutines.launch
+import androidx.compose.ui.unit.dp
 
 @Composable
 fun LoginScreen(
@@ -93,7 +89,7 @@ fun LoginScreen(
             Text(
                 text = "Shoply",
                 style = MaterialTheme.typography.displayMedium,
-                color = ShoplyGreen
+                color = MaterialTheme.colorScheme.primary
             )
 
             Spacer(modifier = Modifier.height(ShoplySpacing.small))
@@ -101,7 +97,7 @@ fun LoginScreen(
             Text(
                 text = "כניסה לרשימת הקניות",
                 style = MaterialTheme.typography.bodyLarge,
-                color = Gray600,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
 
@@ -109,7 +105,7 @@ fun LoginScreen(
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
+                shape = MaterialTheme.shapes.large,
                 elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
@@ -140,19 +136,13 @@ fun LoginScreen(
                         isPassword = true
                     )
 
-                    Button(
-                        onClick = {
-                            authViewModel.login(email, password)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
+                    ShoplyButton(
+                        text = "התחבר",
+                        onClick = { authViewModel.login(email, password) },
+                        modifier = Modifier.fillMaxWidth(),
                         enabled = !authState.isLoading,
-                        colors = ButtonDefaults.buttonColors(containerColor = ShoplyGreenLight),
-                        shape = RoundedCornerShape(14.dp)
-                    ) {
-                        Text(text = "התחבר")
-                    }
+                        size = ShoplyButtonSize.Large
+                    )
                 }
             }
 
@@ -205,23 +195,29 @@ fun LoginScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
+                    .height(ShoplyButtonHeight.large),
                 enabled = !authState.isLoading,
-                shape = RoundedCornerShape(14.dp)
+                shape = MaterialTheme.shapes.medium
             ) {
-                Text(text = "התחברות עם Google")
+                Text(
+                    text = "התחברות עם Google",
+                    style = MaterialTheme.typography.labelLarge
+                )
             }
 
             Spacer(modifier = Modifier.height(ShoplySpacing.small))
 
-            HorizontalDivider(color = Gray300, modifier = Modifier.fillMaxWidth())
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.fillMaxWidth()
+            )
 
             Spacer(modifier = Modifier.height(ShoplySpacing.small))
 
             Text(
                 text = "משתמש חדש? המשך למסך הרשמה",
                 style = MaterialTheme.typography.bodyMedium,
-                color = ShoplyGreen
+                color = MaterialTheme.colorScheme.primary
             )
         }
 

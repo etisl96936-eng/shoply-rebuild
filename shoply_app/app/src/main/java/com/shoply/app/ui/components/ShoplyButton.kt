@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.shoply.app.ui.theme.ShoplySpacing
 
 /**
  * כפתור סטנדרטי של Shoply
@@ -27,10 +28,6 @@ enum class ShoplyButtonSize(val height: Dp) {
     Large(56.dp)
 }
 
-object ShoplySpacing {
-    val small = 8.dp
-    val medium = 16.dp
-}
 
 @Composable
 fun ShoplyButton(
