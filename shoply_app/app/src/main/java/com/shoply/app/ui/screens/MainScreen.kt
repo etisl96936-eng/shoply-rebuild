@@ -44,7 +44,7 @@ import kotlinx.coroutines.launch
 import com.shoply.app.data.ProductUiModel
 import com.shoply.app.data.StorePrice
 import com.shoply.app.ui.components.ProductPriceCard
-
+import com.shoply.app.ui.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,6 +78,7 @@ fun MainScreen(
     var pendingStoreSelection by remember { mutableStateOf<String?>(null) }
     var showStoreConfirmationDialog by remember { mutableStateOf(false) }
     var lockedStore by remember { mutableStateOf<String?>(null) }
+    var showCompleteListDialog by remember { mutableStateOf(false) }
 
     val closeDrawerAnd: (action: () -> Unit) -> Unit = { action ->
         scope.launch { drawerState.close() }
@@ -96,7 +97,7 @@ fun MainScreen(
                 },
                 onStatsClick = {
                     closeDrawerAnd {
-                        // TODO: מסך סטטיסטיקות
+                        navController.navigate(Screen.Stats.route)
                     }
                 },
                 onSettingsClick = {
@@ -398,6 +399,17 @@ fun MainScreen(
                                             }
                                         )
                                     }
+                                    item {
+                                        Spacer(modifier = Modifier.height(ShoplySpacing.medium))
+
+                                        Button(
+                                            onClick = { showCompleteListDialog = true },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            enabled = selectedStore != null && filteredItems.isNotEmpty()
+                                        ) {
+                                            Text("סיים רשימה")
+                                        }
+                                    }
                                 }
                             } else if (windowSize.isCompact) {
                                 LazyColumn(
@@ -441,6 +453,39 @@ fun MainScreen(
                                 }
                             }
                         }
+
+
+                        if (showCompleteListDialog) {
+                            ShoplyAlertDialog(
+                                title = "סיום רשימה",
+                                message = "האם את בטוחה שברצונך לסיים את הרשימה ולהעביר אותה לסטטיסטיקות?",
+                                confirmText = "כן",
+                                dismissText = "לא",
+                                onConfirm = {
+                                    val selectedStoreName = selectedStore
+                                    val totalForSelectedStore = if (selectedStoreName != null) {
+                                        totalsByStore[selectedStoreName] ?: 0.0
+                                    } else {
+                                        0.0
+                                    }
+
+                                    if (selectedStoreName != null) {
+                                        viewModel.completeShoppingList(
+                                            items = pendingItems + purchasedItems,
+                                            selectedStore = selectedStoreName,
+                                            totalAmount = totalForSelectedStore
+                                        )
+                                    }
+
+                                    showCompleteListDialog = false
+                                },
+                                onDismiss = {
+                                    showCompleteListDialog = false
+                                }
+                            )
+                        }
+
+
                     }
                 }
             }

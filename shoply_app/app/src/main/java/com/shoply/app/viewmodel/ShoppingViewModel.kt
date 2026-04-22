@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.shoply.app.data.CompletedShoppingList
 
 class ShoppingViewModel : ViewModel() {
     private val repository = ShoppingRepository()
@@ -60,6 +61,27 @@ class ShoppingViewModel : ViewModel() {
                     repository.getUserShoppingListFlow(uid)
                         .map { items ->
                             UiState.Success(items) as UiState<List<ShoppingItem>>
+                        }
+                        .catch { e ->
+                            emit(UiState.Error(e.message ?: "שגיאה לא ידועה"))
+                        }
+                }
+            }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = UiState.Loading
+            )
+
+    val completedListsUiState: StateFlow<UiState<List<CompletedShoppingList>>> =
+        currentUidFlow
+            .flatMapLatest { uid ->
+                if (uid.isBlank()) {
+                    flowOf(UiState.Error("לא נמצא משתמש מחובר"))
+                } else {
+                    repository.getCompletedShoppingListsFlow(uid)
+                        .map { lists ->
+                            UiState.Success(lists) as UiState<List<CompletedShoppingList>>
                         }
                         .catch { e ->
                             emit(UiState.Error(e.message ?: "שגיאה לא ידועה"))
@@ -119,6 +141,24 @@ class ShoppingViewModel : ViewModel() {
 
         viewModelScope.launch {
             repository.removeFromUserShoppingList(uid, itemId)
+        }
+    }
+
+    fun completeShoppingList(
+        items: List<ShoppingItem>,
+        selectedStore: String,
+        totalAmount: Double
+    ) {
+        val uid = currentUid
+        if (uid.isBlank()) return
+
+        viewModelScope.launch {
+            repository.completeShoppingList(
+                uid = uid,
+                items = items,
+                selectedStore = selectedStore,
+                totalAmount = totalAmount
+            )
         }
     }
 }

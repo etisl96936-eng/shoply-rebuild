@@ -6,6 +6,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import com.shoply.app.data.CompletedShoppingList
 
 class ShoppingRepository {
     private val firestore = FirebaseFirestore.getInstance()
@@ -48,6 +49,26 @@ class ShoppingRepository {
         awaitClose { subscription.remove() }
     }
 
+    fun getCompletedShoppingListsFlow(uid: String): Flow<List<CompletedShoppingList>> = callbackFlow {
+        val subscription = firestore
+            .collection("users")
+            .document(uid)
+            .collection("completed_lists")
+            .orderBy("completedAt")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+
+                val lists = snapshot?.toObjects(CompletedShoppingList::class.java) ?: emptyList()
+                trySend(lists)
+            }
+
+        awaitClose { subscription.remove() }
+    }
+
+
     // הוספת מוצר לקטלוג הגלובלי
     suspend fun addItem(item: ShoppingItem) {
         try {
@@ -74,7 +95,7 @@ class ShoppingRepository {
             .document(uid)
             .collection("shopping_list")
             .document(item.id)
-            .set(item.copy(isChecked = true))
+            .set(item.copy(isChecked = false))
             .await()
     }
 
@@ -118,5 +139,37 @@ class ShoppingRepository {
             .document(itemId)
             .update("isChecked", isChecked)
             .await()
+    }
+
+    suspend fun completeShoppingList(
+        uid: String,
+        items: List<ShoppingItem>,
+        selectedStore: String,
+        totalAmount: Double
+    ) {
+        if (uid.isBlank() || items.isEmpty() || selectedStore.isBlank()) return
+
+        val completedListRef = firestore.collection("users")
+            .document(uid)
+            .collection("completed_lists")
+            .document()
+
+        val completedData = hashMapOf(
+            "id" to completedListRef.id,
+            "completedAt" to System.currentTimeMillis(),
+            "selectedStore" to selectedStore,
+            "items" to items,
+            "totalAmount" to totalAmount
+        )
+
+        completedListRef.set(completedData).await()
+
+        val shoppingListCollection = firestore.collection("users")
+            .document(uid)
+            .collection("shopping_list")
+
+        items.forEach { item ->
+            shoppingListCollection.document(item.id).delete().await()
+        }
     }
 }

@@ -14,6 +14,7 @@ import com.shoply.app.viewmodel.AuthViewModel
 import com.shoply.app.viewmodel.ShoppingViewModel
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.shoply.app.ui.screens.StatsScreen
 
 /**
  * NavGraph - ניהול ניווט ראשי של האפליקציה
@@ -77,6 +78,10 @@ fun NavGraph(activity: Activity) {
                 authViewModel = authViewModel,
                 activity = activity
             )
+        }
+
+        composable(Screen.Stats.route) {
+            StatsScreen(viewModel = shoppingViewModel)
         }
     }
 }

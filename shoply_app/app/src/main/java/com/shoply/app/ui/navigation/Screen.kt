@@ -11,6 +11,7 @@ sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Register : Screen("register")
     object Main : Screen("main")
+    object Stats : Screen("stats")
 
     // Future screens - יתווספו בהמשך
     object Home : Screen("home")
