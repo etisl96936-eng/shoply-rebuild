@@ -149,7 +149,11 @@ fun MainScreen(
                         icon = { Icon(Icons.Default.List, contentDescription = null) },
                         label = { Text("כל המוצרים") },
                         selected = selectedTab == 0,
-                        onClick = { selectedTab = 0 }
+                        onClick = {
+                            selectedTab = 0
+                            searchQuery = ""
+                            selectedCategory = null
+                        }
                     )
                     NavigationBarItem(
                         icon = {
@@ -171,7 +175,11 @@ fun MainScreen(
                         },
                         label = { Text("הרשימה שלי") },
                         selected = selectedTab == 1,
-                        onClick = { selectedTab = 1 }
+                        onClick = {
+                            selectedTab = 1
+                            searchQuery = ""
+                            selectedCategory = null
+                        }
                     )
                 }
             },
