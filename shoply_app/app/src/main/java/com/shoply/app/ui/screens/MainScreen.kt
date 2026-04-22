@@ -73,6 +73,7 @@ fun MainScreen(
     var selectedCategory by remember { mutableStateOf<String?>(null) }
 
     var selectedTab by remember { mutableStateOf(0) }
+    var selectedStore by remember { mutableStateOf<String?>(null) }
 
     val closeDrawerAnd: (action: () -> Unit) -> Unit = { action ->
         scope.launch { drawerState.close() }
@@ -260,6 +261,12 @@ fun MainScreen(
                         val totalItemsCount = filteredItems.size
                         val pendingItemsCount = pendingItems.size
                         val purchasedItemsCount = purchasedItems.size
+                        val pendingProductsUi = pendingItems.map { it.toProductUiModel(isInMyList = true) }
+
+                        val totalsByStore = pendingProductsUi
+                            .flatMap { product -> product.storePrices }
+                            .groupBy { it.storeName }
+                            .mapValues { (_, prices) -> prices.sumOf { it.price } }
 
                         OutlinedTextField(
                             value = searchQuery,
@@ -327,6 +334,7 @@ fun MainScreen(
                                                 purchasedItems = purchasedItemsCount
                                             )
                                         }
+
                                         item {
                                             Text(
                                                 text = "לקנייה",
@@ -374,6 +382,13 @@ fun MainScreen(
                                                 }
                                             )
                                         }
+                                    }
+                                    item {
+                                        StoreTotalsSection(
+                                            totalsByStore = totalsByStore,
+                                            selectedStore = selectedStore,
+                                            onStoreSelected = { selectedStore = it }
+                                        )
                                     }
                                 }
                             } else if (windowSize.isCompact) {
@@ -780,6 +795,71 @@ fun CategoryChips(
                     },
                     label = { Text(category) }
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StoreTotalsSection(
+    totalsByStore: Map<String, Double>,
+    selectedStore: String?,
+    onStoreSelected: (String) -> Unit
+) {
+    if (totalsByStore.isEmpty()) return
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = ShoplySpacing.medium)
+    ) {
+        Text(
+            text = "איפה עושים קנייה?",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = ShoplySpacing.small)
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
+        ) {
+            totalsByStore.forEach { (storeName, total) ->
+                Card(
+                    modifier = Modifier.weight(1f),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (selectedStore == storeName) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        }
+                    ),
+                    onClick = { onStoreSelected(storeName) }
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = storeName,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+
+                        Text(
+                            text = "₪%.2f".format(total),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        RadioButton(
+                            selected = selectedStore == storeName,
+                            onClick = { onStoreSelected(storeName) }
+                        )
+                    }
+                }
             }
         }
     }
