@@ -218,16 +218,30 @@ fun MainScreen(
                     is UiState.Success -> {
                         val baseItems = s.data
 
-                        val filteredItems = baseItems.filter { item ->
-                            val matchesSearch =
-                                searchQuery.isBlank() ||
-                                        item.title.contains(searchQuery, ignoreCase = true) ||
-                                        item.description.contains(searchQuery, ignoreCase = true)
-
-                            val matchesCategory =
+                        val filteredItems = if (searchQuery.isBlank()) {
+                            baseItems.filter { item ->
                                 selectedCategory == null || item.category == selectedCategory
+                            }
+                        } else {
+                            val query = searchQuery.trim()
 
-                            matchesSearch && matchesCategory
+                            val categoryFiltered = baseItems.filter { item ->
+                                selectedCategory == null || item.category == selectedCategory
+                            }
+
+                            val startsWithMatches = categoryFiltered.filter { item ->
+                                item.title.startsWith(query, ignoreCase = true)
+                            }
+
+                            val containsMatches = categoryFiltered.filter { item ->
+                                !item.title.startsWith(query, ignoreCase = true) &&
+                                        (
+                                                item.title.contains(query, ignoreCase = true) ||
+                                                        item.description.contains(query, ignoreCase = true)
+                                                )
+                            }
+
+                            startsWithMatches + containsMatches
                         }
 
                         OutlinedTextField(
