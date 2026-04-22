@@ -41,6 +41,10 @@ import com.shoply.app.ui.theme.rememberShoplyWindowSize
 import com.shoply.app.viewmodel.AuthViewModel
 import com.shoply.app.viewmodel.ShoppingViewModel
 import kotlinx.coroutines.launch
+import com.shoply.app.data.ProductUiModel
+import com.shoply.app.data.StorePrice
+import com.shoply.app.ui.components.ProductPriceCard
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -283,16 +287,16 @@ fun MainScreen(
                                     verticalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
                                 ) {
                                     items(filteredItems) { item ->
-                                        ShoppingItemCard(
-                                            item = item,
+                                        ProductPriceCard(
+                                            product = item.toProductUiModel(
+                                                isInMyList = if (selectedTab == 0) {
+                                                    shoppingListIds.contains(item.id)
+                                                } else {
+                                                    true
+                                                }
+                                            ),
                                             isAdmin = isAdmin,
-                                            selectedTab = selectedTab,
-                                            isChecked = if (selectedTab == 0) {
-                                                shoppingListIds.contains(item.id)
-                                            } else {
-                                                item.isChecked
-                                            },
-                                            onToggleChecked = {
+                                            onToggleInList = {
                                                 if (selectedTab == 0) {
                                                     viewModel.toggleItemInMyList(item)
                                                 } else {
@@ -312,16 +316,16 @@ fun MainScreen(
                                     horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
                                 ) {
                                     items(filteredItems, key = { it.id }) { item ->
-                                        ShoppingItemCard(
-                                            item = item,
+                                        ProductPriceCard(
+                                            product = item.toProductUiModel(
+                                                isInMyList = if (selectedTab == 0) {
+                                                    shoppingListIds.contains(item.id)
+                                                } else {
+                                                    true
+                                                }
+                                            ),
                                             isAdmin = isAdmin,
-                                            selectedTab = selectedTab,
-                                            isChecked = if (selectedTab == 0) {
-                                                shoppingListIds.contains(item.id)
-                                            } else {
-                                                item.isChecked
-                                            },
-                                            onToggleChecked = {
+                                            onToggleInList = {
                                                 if (selectedTab == 0) {
                                                     viewModel.toggleItemInMyList(item)
                                                 } else {
@@ -536,6 +540,41 @@ private fun ShoppingItemCard(
         )
     }
 }
+
+private fun ShoppingItem.toProductUiModel(isInMyList: Boolean): ProductUiModel {
+    val mockPrices = when (title) {
+        "חלב 3%" -> listOf(
+            StorePrice("שופרסל", 7.20),
+            StorePrice("רמי לוי", 6.90),
+            StorePrice("ויקטורי", 7.50)
+        )
+        "לחם פרוס" -> listOf(
+            StorePrice("שופרסל", 6.50),
+            StorePrice("רמי לוי", 6.90),
+            StorePrice("ויקטורי", 7.20)
+        )
+        "כפות" -> listOf(
+            StorePrice("שופרסל", 12.90),
+            StorePrice("רמי לוי", 11.50),
+            StorePrice("ויקטורי", 13.20)
+        )
+        else -> listOf(
+            StorePrice("שופרסל", 9.90),
+            StorePrice("רמי לוי", 8.70),
+            StorePrice("ויקטורי", 10.20)
+        )
+    }
+
+    return ProductUiModel(
+        id = id,
+        title = title,
+        category = category,
+        quantityLabel = quantity,
+        storePrices = mockPrices,
+        isInMyList = isInMyList
+    )
+}
+
 
 @Composable
 fun CategoryChips(
