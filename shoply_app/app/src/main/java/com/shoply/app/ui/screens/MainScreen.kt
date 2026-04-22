@@ -309,24 +309,31 @@ fun MainScreen(
                                     verticalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
                                 ) {
                                     items(filteredItems) { item ->
-                                        ProductPriceCard(
-                                            product = item.toProductUiModel(
-                                                isInMyList = if (selectedTab == 0) {
-                                                    shoppingListIds.contains(item.id)
-                                                } else {
-                                                    true
-                                                }
-                                            ),
-                                            isAdmin = isAdmin,
-                                            onToggleInList = {
-                                                if (selectedTab == 0) {
+                                        if (selectedTab == 0) {
+                                            ProductPriceCard(
+                                                product = item.toProductUiModel(
+                                                    isInMyList = shoppingListIds.contains(item.id)
+                                                ),
+                                                isAdmin = isAdmin,
+                                                onToggleInList = {
                                                     viewModel.toggleItemInMyList(item)
-                                                } else {
+                                                },
+                                                onDelete = { itemToDelete = item }
+                                            )
+                                        } else {
+                                            ShoppingItemCard(
+                                                item = item,
+                                                isAdmin = isAdmin,
+                                                selectedTab = selectedTab,
+                                                isChecked = item.isChecked,
+                                                onToggleChecked = {
+                                                    viewModel.togglePurchasedInMyList(item)
+                                                },
+                                                onDelete = {
                                                     viewModel.removeFromMyList(item.id)
                                                 }
-                                            },
-                                            onDelete = { itemToDelete = item }
-                                        )
+                                            )
+                                        }
                                     }
                                 }
                             } else {
@@ -338,24 +345,31 @@ fun MainScreen(
                                     horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
                                 ) {
                                     items(filteredItems, key = { it.id }) { item ->
-                                        ProductPriceCard(
-                                            product = item.toProductUiModel(
-                                                isInMyList = if (selectedTab == 0) {
-                                                    shoppingListIds.contains(item.id)
-                                                } else {
-                                                    true
-                                                }
-                                            ),
-                                            isAdmin = isAdmin,
-                                            onToggleInList = {
-                                                if (selectedTab == 0) {
+                                        if (selectedTab == 0) {
+                                            ProductPriceCard(
+                                                product = item.toProductUiModel(
+                                                    isInMyList = shoppingListIds.contains(item.id)
+                                                ),
+                                                isAdmin = isAdmin,
+                                                onToggleInList = {
                                                     viewModel.toggleItemInMyList(item)
-                                                } else {
+                                                },
+                                                onDelete = { itemToDelete = item }
+                                            )
+                                        } else {
+                                            ShoppingItemCard(
+                                                item = item,
+                                                isAdmin = isAdmin,
+                                                selectedTab = selectedTab,
+                                                isChecked = item.isChecked,
+                                                onToggleChecked = {
+                                                    viewModel.togglePurchasedInMyList(item)
+                                                },
+                                                onDelete = {
                                                     viewModel.removeFromMyList(item.id)
                                                 }
-                                            },
-                                            onDelete = { itemToDelete = item }
-                                        )
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -533,6 +547,11 @@ private fun ShoppingItemCard(
                         MaterialTheme.colorScheme.onSurfaceVariant
                     } else {
                         MaterialTheme.colorScheme.onSurface
+                    },
+                    textDecoration = if (isChecked) {
+                        androidx.compose.ui.text.style.TextDecoration.LineThrough
+                    } else {
+                        androidx.compose.ui.text.style.TextDecoration.None
                     }
                 )
             },
@@ -546,14 +565,12 @@ private fun ShoppingItemCard(
                 )
             },
             trailingContent = {
-                if (isAdmin && selectedTab == 0) {
-                    IconButton(onClick = onDelete) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "מחק",
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    }
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "הסר מהרשימה",
+                        tint = MaterialTheme.colorScheme.error
+                    )
                 }
             },
             colors = ListItemDefaults.colors(

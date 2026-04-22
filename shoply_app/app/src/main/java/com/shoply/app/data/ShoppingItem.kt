@@ -15,5 +15,6 @@ data class ShoppingItem(
     val isChecked: Boolean = false,
     val addedBy: String = "",
     val timestamp: Long = System.currentTimeMillis(),
-    val isSelected: Boolean = false
+    val isSelected: Boolean = false,
+    val isPurchased: Boolean = false
 )

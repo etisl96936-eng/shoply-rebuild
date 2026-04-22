@@ -104,7 +104,7 @@ class ShoppingRepository {
         if (snapshot.exists()) {
             docRef.delete().await()
         } else {
-            docRef.set(item.copy(isChecked = true)).await()
+            docRef.set(item.copy(isChecked = false)).await()
         }
     }
 
