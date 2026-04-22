@@ -75,6 +75,10 @@ fun MainScreen(
     var selectedTab by remember { mutableStateOf(0) }
     val selectedStore by viewModel.selectedStore.collectAsState()
 
+    var pendingStoreSelection by remember { mutableStateOf<String?>(null) }
+    var showStoreConfirmationDialog by remember { mutableStateOf(false) }
+    var lockedStore by remember { mutableStateOf<String?>(null) }
+
     val closeDrawerAnd: (action: () -> Unit) -> Unit = { action ->
         scope.launch { drawerState.close() }
         action()
@@ -387,7 +391,11 @@ fun MainScreen(
                                         StoreTotalsSection(
                                             totalsByStore = totalsByStore,
                                             selectedStore = selectedStore,
-                                            onStoreSelected = { viewModel.selectStore(it) }
+                                            lockedStore = lockedStore,
+                                            onStoreSelected = {
+                                                pendingStoreSelection = it
+                                                showStoreConfirmationDialog = true
+                                            }
                                         )
                                     }
                                 }
@@ -443,6 +451,24 @@ fun MainScreen(
                     onConfirm = { name, quantity, description, category ->
                         viewModel.addItem(name, quantity, description, category)
                         showAddDialog = false
+                    }
+                )
+            }
+            if (showStoreConfirmationDialog && pendingStoreSelection != null) {
+                ShoplyAlertDialog(
+                    title = "בחירת סופר",
+                    message = "האם את מעוניינת לבצע את הקנייה בסופר ${pendingStoreSelection}?",
+                    confirmText = "כן",
+                    dismissText = "לא",
+                    onConfirm = {
+                        lockedStore = pendingStoreSelection
+                        viewModel.selectStore(pendingStoreSelection!!)
+                        showStoreConfirmationDialog = false
+                        pendingStoreSelection = null
+                    },
+                    onDismiss = {
+                        showStoreConfirmationDialog = false
+                        pendingStoreSelection = null
                     }
                 )
             }
@@ -804,6 +830,7 @@ fun CategoryChips(
 private fun StoreTotalsSection(
     totalsByStore: Map<String, Double>,
     selectedStore: String?,
+    lockedStore: String?,
     onStoreSelected: (String) -> Unit
 ) {
     if (totalsByStore.isEmpty()) return
@@ -823,7 +850,10 @@ private fun StoreTotalsSection(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
         ) {
+
             totalsByStore.forEach { (storeName, total) ->
+                val isLocked = lockedStore == storeName
+
                 Card(
                     modifier = Modifier.weight(1f),
                     colors = CardDefaults.cardColors(
