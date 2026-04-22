@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Logout
@@ -45,6 +46,7 @@ import com.shoply.app.data.ProductUiModel
 import com.shoply.app.data.StorePrice
 import com.shoply.app.ui.components.ProductPriceCard
 import com.shoply.app.ui.navigation.Screen
+import androidx.compose.material.icons.filled.History
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,6 +100,11 @@ fun MainScreen(
                 onStatsClick = {
                     closeDrawerAnd {
                         navController.navigate(Screen.Stats.route)
+                    }
+                },
+                onCompletedListsClick = {
+                    closeDrawerAnd {
+                        navController.navigate("completed_lists")
                     }
                 },
                 onSettingsClick = {
@@ -463,8 +470,13 @@ fun MainScreen(
                                 dismissText = "לא",
                                 onConfirm = {
                                     val selectedStoreName = selectedStore
+                                    val completedProductsUi = (pendingItems + purchasedItems)
+                                        .map { it.toProductUiModel(isInMyList = true) }
+
                                     val totalForSelectedStore = if (selectedStoreName != null) {
-                                        totalsByStore[selectedStoreName] ?: 0.0
+                                        completedProductsUi.sumOf { product ->
+                                            product.storePrices.firstOrNull { it.storeName == selectedStoreName }?.price ?: 0.0
+                                        }
                                     } else {
                                         0.0
                                     }
@@ -561,8 +573,9 @@ private fun ShoplyDrawerContent(
     onHomeClick: () -> Unit,
     onProfileClick: () -> Unit,
     onStatsClick: () -> Unit,
+    onCompletedListsClick: () -> Unit,
     onSettingsClick: () -> Unit,
-    onLogoutClick: () -> Unit
+    onLogoutClick: () -> Unit,
 ) {
     ModalDrawerSheet {
         Column(
@@ -625,6 +638,12 @@ private fun ShoplyDrawerContent(
             )
 
             DrawerItem(
+                icon = Icons.Default.History,
+                label = "ארכיון רשימות",
+                onClick = onCompletedListsClick
+            )
+
+            DrawerItem(
                 icon = Icons.Default.Settings,
                 label = "הגדרות",
                 onClick = onSettingsClick
@@ -657,7 +676,6 @@ private fun DrawerItem(
         modifier = Modifier.padding(horizontal = ShoplySpacing.small)
     )
 }
-
 @Composable
 private fun ShoppingItemCard(
     item: ShoppingItem,

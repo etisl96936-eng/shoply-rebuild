@@ -15,6 +15,7 @@ import com.shoply.app.viewmodel.ShoppingViewModel
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.shoply.app.ui.screens.StatsScreen
+import com.shoply.app.ui.screens.CompletedListsScreen
 
 /**
  * NavGraph - ניהול ניווט ראשי של האפליקציה
@@ -82,6 +83,10 @@ fun NavGraph(activity: Activity) {
 
         composable(Screen.Stats.route) {
             StatsScreen(viewModel = shoppingViewModel)
+        }
+
+        composable("completed_lists") {
+            CompletedListsScreen(viewModel = shoppingViewModel)
         }
     }
 }
