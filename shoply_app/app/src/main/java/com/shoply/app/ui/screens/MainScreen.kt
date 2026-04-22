@@ -230,6 +230,7 @@ fun MainScreen(
                             baseItems.filter { item ->
                                 selectedCategory == null || item.category == selectedCategory
                             }
+
                         } else {
                             val query = searchQuery.trim()
 
@@ -245,12 +246,17 @@ fun MainScreen(
                                 !item.title.startsWith(query, ignoreCase = true) &&
                                         (
                                                 item.title.contains(query, ignoreCase = true) ||
-                                                        item.description.contains(query, ignoreCase = true)
+                                                        item.description.contains(
+                                                            query,
+                                                            ignoreCase = true
+                                                        )
                                                 )
                             }
 
                             startsWithMatches + containsMatches
                         }
+                        val pendingItems = filteredItems.filter { !it.isChecked }
+                        val purchasedItems = filteredItems.filter { it.isChecked }
 
                         OutlinedTextField(
                             value = searchQuery,
@@ -290,8 +296,10 @@ fun MainScreen(
                                     text = when {
                                         selectedTab == 1 && baseItems.isEmpty() ->
                                             "הרשימה שלך ריקה.\nסמני מוצרים מ'כל המוצרים' כדי להוסיף אותם לכאן"
+
                                         selectedTab == 0 && baseItems.isEmpty() ->
                                             "אין פריטים בקטלוג. לחצי על ה-+ להוספה"
+
                                         else ->
                                             "לא נמצאו פריטים התואמים לחיפוש"
                                     },
@@ -302,25 +310,47 @@ fun MainScreen(
                                 )
                             }
                         } else {
-                            if (windowSize.isCompact) {
+                            if (selectedTab == 1) {
                                 LazyColumn(
                                     modifier = Modifier.fillMaxSize(),
                                     contentPadding = PaddingValues(ShoplySpacing.medium),
                                     verticalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
                                 ) {
-                                    items(filteredItems) { item ->
-                                        if (selectedTab == 0) {
-                                            ProductPriceCard(
-                                                product = item.toProductUiModel(
-                                                    isInMyList = shoppingListIds.contains(item.id)
-                                                ),
-                                                isAdmin = isAdmin,
-                                                onToggleInList = {
-                                                    viewModel.toggleItemInMyList(item)
-                                                },
-                                                onDelete = { itemToDelete = item }
+                                    if (pendingItems.isNotEmpty()) {
+                                        item {
+                                            Text(
+                                                text = "לקנייה",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                modifier = Modifier.padding(vertical = ShoplySpacing.small)
                                             )
-                                        } else {
+                                        }
+
+                                        items(pendingItems) { item ->
+                                            ShoppingItemCard(
+                                                item = item,
+                                                isAdmin = isAdmin,
+                                                selectedTab = selectedTab,
+                                                isChecked = item.isChecked,
+                                                onToggleChecked = {
+                                                    viewModel.togglePurchasedInMyList(item)
+                                                },
+                                                onDelete = {
+                                                    viewModel.removeFromMyList(item.id)
+                                                }
+                                            )
+                                        }
+                                    }
+
+                                    if (purchasedItems.isNotEmpty()) {
+                                        item {
+                                            Text(
+                                                text = "נרכשו",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                modifier = Modifier.padding(vertical = ShoplySpacing.small)
+                                            )
+                                        }
+
+                                        items(purchasedItems) { item ->
                                             ShoppingItemCard(
                                                 item = item,
                                                 isAdmin = isAdmin,
@@ -336,6 +366,25 @@ fun MainScreen(
                                         }
                                     }
                                 }
+                            } else if (windowSize.isCompact) {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(ShoplySpacing.medium),
+                                    verticalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
+                                ) {
+                                    items(filteredItems) { item ->
+                                        ProductPriceCard(
+                                            product = item.toProductUiModel(
+                                                isInMyList = shoppingListIds.contains(item.id)
+                                            ),
+                                            isAdmin = isAdmin,
+                                            onToggleInList = {
+                                                viewModel.toggleItemInMyList(item)
+                                            },
+                                            onDelete = { itemToDelete = item }
+                                        )
+                                    }
+                                }
                             } else {
                                 LazyVerticalGrid(
                                     columns = GridCells.Fixed(gridColumns),
@@ -345,31 +394,16 @@ fun MainScreen(
                                     horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
                                 ) {
                                     items(filteredItems, key = { it.id }) { item ->
-                                        if (selectedTab == 0) {
-                                            ProductPriceCard(
-                                                product = item.toProductUiModel(
-                                                    isInMyList = shoppingListIds.contains(item.id)
-                                                ),
-                                                isAdmin = isAdmin,
-                                                onToggleInList = {
-                                                    viewModel.toggleItemInMyList(item)
-                                                },
-                                                onDelete = { itemToDelete = item }
-                                            )
-                                        } else {
-                                            ShoppingItemCard(
-                                                item = item,
-                                                isAdmin = isAdmin,
-                                                selectedTab = selectedTab,
-                                                isChecked = item.isChecked,
-                                                onToggleChecked = {
-                                                    viewModel.togglePurchasedInMyList(item)
-                                                },
-                                                onDelete = {
-                                                    viewModel.removeFromMyList(item.id)
-                                                }
-                                            )
-                                        }
+                                        ProductPriceCard(
+                                            product = item.toProductUiModel(
+                                                isInMyList = shoppingListIds.contains(item.id)
+                                            ),
+                                            isAdmin = isAdmin,
+                                            onToggleInList = {
+                                                viewModel.toggleItemInMyList(item)
+                                            },
+                                            onDelete = { itemToDelete = item }
+                                        )
                                     }
                                 }
                             }
@@ -537,46 +571,73 @@ private fun ShoppingItemCard(
     onToggleChecked: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val productUiModel = item.toProductUiModel(isInMyList = true)
+    val lowestPrice = productUiModel.storePrices.minOfOrNull { it.price }
     ShoplyCard {
-        ListItem(
-            headlineContent = {
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = if (isChecked) {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
-                    textDecoration = if (isChecked) {
-                        androidx.compose.ui.text.style.TextDecoration.LineThrough
-                    } else {
-                        androidx.compose.ui.text.style.TextDecoration.None
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            ListItem(
+                headlineContent = {
+                    Text(
+                        text = item.title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (isChecked) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
+                        textDecoration = if (isChecked) {
+                            androidx.compose.ui.text.style.TextDecoration.LineThrough
+                        } else {
+                            androidx.compose.ui.text.style.TextDecoration.None
+                        }
+                    )
+                },
+                supportingContent = {
+                    Text("${item.quantity} | ${item.category}")
+                },
+                leadingContent = {
+                    Checkbox(
+                        checked = isChecked,
+                        onCheckedChange = { onToggleChecked() }
+                    )
+                },
+                trailingContent = {
+                    if (!isChecked) {
+                        IconButton(onClick = onDelete) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "הסר מהרשימה",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
+                },
+                colors = ListItemDefaults.colors(
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent
                 )
-            },
-            supportingContent = {
-                Text("${item.quantity} | ${item.category}")
-            },
-            leadingContent = {
-                Checkbox(
-                    checked = isChecked,
-                    onCheckedChange = { onToggleChecked() }
-                )
-            },
-            trailingContent = {
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "הסר מהרשימה",
-                        tint = MaterialTheme.colorScheme.error
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        start = ShoplySpacing.medium,
+                        end = ShoplySpacing.medium,
+                        bottom = ShoplySpacing.medium
+                    ),
+                horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
+            ) {
+                productUiModel.storePrices.forEach { storePrice ->
+                    StorePriceChip(
+                        storeName = storePrice.storeName,
+                        price = storePrice.price,
+                        isHighlighted = storePrice.price == lowestPrice
                     )
                 }
-            },
-            colors = ListItemDefaults.colors(
-                containerColor = androidx.compose.ui.graphics.Color.Transparent
-            )
-        )
+            }
+        }
     }
 }
 
