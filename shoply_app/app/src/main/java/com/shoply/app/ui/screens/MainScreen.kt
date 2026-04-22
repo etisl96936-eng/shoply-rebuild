@@ -4,10 +4,10 @@ import android.app.Activity
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -28,6 +28,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
@@ -41,11 +42,6 @@ import com.shoply.app.viewmodel.AuthViewModel
 import com.shoply.app.viewmodel.ShoppingViewModel
 import kotlinx.coroutines.launch
 
-/**
- * Main Screen - המסך הראשי של האפליקציה
- *
- * עודכן באבן דרך 6.1 - הוספת Navigation Drawer
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
@@ -56,29 +52,24 @@ fun MainScreen(
     displayName: String = "",
     activity: Activity
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val catalogState by viewModel.catalogUiState.collectAsStateWithLifecycle()
+    val shoppingListState by viewModel.shoppingListUiState.collectAsStateWithLifecycle()
 
-    // אבן דרך 4.3 - Responsive Design
     val windowSize = rememberShoplyWindowSize(activity)
     val gridColumns = ShoplyResponsive.gridColumns(windowSize)
 
-    // אבן דרך 6.1 - Navigation Drawer
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    // מצבי ניהול הדיאלוגים
     var showAddDialog by remember { mutableStateOf(false) }
     var itemToDelete by remember { mutableStateOf<ShoppingItem?>(null) }
     var showLogoutDialog by remember { mutableStateOf(false) }
 
-    // חיפוש וסינון
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
 
-    // טאב נוכחי: 0 = כל המוצרים, 1 = הרשימה שלי
     var selectedTab by remember { mutableStateOf(0) }
 
-    // פונקציית עזר לסגירת ה-Drawer לפני כל ניווט
     val closeDrawerAnd: (action: () -> Unit) -> Unit = { action ->
         scope.launch { drawerState.close() }
         action()
@@ -90,18 +81,18 @@ fun MainScreen(
             ShoplyDrawerContent(
                 displayName = displayName,
                 isAdmin = isAdmin,
-                onHomeClick = { closeDrawerAnd { /* כבר על Home */ } },
+                onHomeClick = { closeDrawerAnd { } },
                 onProfileClick = {
                     closeDrawerAnd { navController.navigate("profile") }
                 },
                 onStatsClick = {
                     closeDrawerAnd {
-                        // TODO: אבן דרך 13.4 - יוביל למסך Stats
+                        // TODO: מסך סטטיסטיקות
                     }
                 },
                 onSettingsClick = {
                     closeDrawerAnd {
-                        // TODO: אבן דרך 6.4 - יוביל למסך Settings
+                        // TODO: מסך הגדרות
                     }
                 },
                 onLogoutClick = {
@@ -160,11 +151,11 @@ fun MainScreen(
                         icon = {
                             BadgedBox(
                                 badge = {
-                                    when (val s = state) {
+                                    when (val s = shoppingListState) {
                                         is UiState.Success -> {
-                                            val checkedCount = s.data.count { it.isChecked }
-                                            if (checkedCount > 0) {
-                                                Badge { Text("$checkedCount") }
+                                            val count = s.data.size
+                                            if (count > 0) {
+                                                Badge { Text("$count") }
                                             }
                                         }
                                         else -> {}
@@ -181,8 +172,7 @@ fun MainScreen(
                 }
             },
             floatingActionButton = {
-                // הכפתור + מופיע רק בטאב "כל המוצרים"
-                if (selectedTab == 0) {
+                if (selectedTab == 0 && isAdmin) {
                     FloatingActionButton(onClick = { showAddDialog = true }) {
                         Icon(Icons.Default.Add, contentDescription = "הוסף מוצר")
                     }
@@ -194,7 +184,14 @@ fun MainScreen(
                     .padding(padding)
                     .fillMaxSize()
             ) {
-                when (val s = state) {
+                val currentState = if (selectedTab == 0) catalogState else shoppingListState
+
+                val shoppingListIds = when (val listState = shoppingListState) {
+                    is UiState.Success -> listState.data.map { it.id }.toSet()
+                    else -> emptySet()
+                }
+
+                when (val s = currentState) {
                     is UiState.Loading -> {
                         Box(modifier = Modifier.fillMaxSize()) {
                             LoadingView(
@@ -203,37 +200,28 @@ fun MainScreen(
                             )
                         }
                     }
+
                     is UiState.Error -> {
                         Box(modifier = Modifier.fillMaxSize()) {
                             ErrorView(
                                 message = s.message,
-                                onRetry = { /* אופציונלי: קריאה לטעינה מחדש */ },
+                                onRetry = { },
                                 modifier = Modifier.align(Alignment.Center)
                             )
                         }
                     }
-                    is UiState.Success -> {
-                        val allItems = s.data
 
-                        val baseItems = if (selectedTab == 0) {
-                            allItems
-                        } else {
-                            allItems.filter { it.isChecked }
-                        }
+                    is UiState.Success -> {
+                        val baseItems = s.data
 
                         val filteredItems = baseItems.filter { item ->
-                            val matchesSearch = if (searchQuery.isBlank()) {
-                                true
-                            } else {
-                                item.title.contains(searchQuery, ignoreCase = true) ||
+                            val matchesSearch =
+                                searchQuery.isBlank() ||
+                                        item.title.contains(searchQuery, ignoreCase = true) ||
                                         item.description.contains(searchQuery, ignoreCase = true)
-                            }
 
-                            val matchesCategory = if (selectedCategory == null) {
-                                true
-                            } else {
-                                item.category == selectedCategory
-                            }
+                            val matchesCategory =
+                                selectedCategory == null || item.category == selectedCategory
 
                             matchesSearch && matchesCategory
                         }
@@ -276,15 +264,15 @@ fun MainScreen(
                                     text = when {
                                         selectedTab == 1 && baseItems.isEmpty() ->
                                             "הרשימה שלך ריקה.\nסמני מוצרים מ'כל המוצרים' כדי להוסיף אותם לכאן"
-                                        allItems.isEmpty() ->
-                                            "אין פריטים ברשימה. לחצי על ה-+ להוספה"
+                                        selectedTab == 0 && baseItems.isEmpty() ->
+                                            "אין פריטים בקטלוג. לחצי על ה-+ להוספה"
                                         else ->
                                             "לא נמצאו פריטים התואמים לחיפוש"
                                     },
                                     modifier = Modifier.align(Alignment.Center),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    textAlign = TextAlign.Center
                                 )
                             }
                         } else {
@@ -299,7 +287,18 @@ fun MainScreen(
                                             item = item,
                                             isAdmin = isAdmin,
                                             selectedTab = selectedTab,
-                                            onToggleChecked = { viewModel.toggleItemChecked(item) },
+                                            isChecked = if (selectedTab == 0) {
+                                                shoppingListIds.contains(item.id)
+                                            } else {
+                                                item.isChecked
+                                            },
+                                            onToggleChecked = {
+                                                if (selectedTab == 0) {
+                                                    viewModel.toggleItemInMyList(item)
+                                                } else {
+                                                    viewModel.removeFromMyList(item.id)
+                                                }
+                                            },
                                             onDelete = { itemToDelete = item }
                                         )
                                     }
@@ -317,7 +316,18 @@ fun MainScreen(
                                             item = item,
                                             isAdmin = isAdmin,
                                             selectedTab = selectedTab,
-                                            onToggleChecked = { viewModel.toggleItemChecked(item) },
+                                            isChecked = if (selectedTab == 0) {
+                                                shoppingListIds.contains(item.id)
+                                            } else {
+                                                item.isChecked
+                                            },
+                                            onToggleChecked = {
+                                                if (selectedTab == 0) {
+                                                    viewModel.toggleItemInMyList(item)
+                                                } else {
+                                                    viewModel.removeFromMyList(item.id)
+                                                }
+                                            },
                                             onDelete = { itemToDelete = item }
                                         )
                                     }
@@ -328,7 +338,6 @@ fun MainScreen(
                 }
             }
 
-            // דיאלוג הוספת פריט
             if (showAddDialog) {
                 AddItemDialog(
                     onDismiss = { showAddDialog = false },
@@ -339,7 +348,6 @@ fun MainScreen(
                 )
             }
 
-            // דיאלוג אישור מחיקה
             itemToDelete?.let { item ->
                 ShoplyAlertDialog(
                     title = "מחיקת מוצר",
@@ -376,10 +384,6 @@ fun MainScreen(
     }
 }
 
-/**
- * אבן דרך 6.1 - תוכן ה-Navigation Drawer
- * תפריט צד עם פריטי ניווט ראשיים של האפליקציה
- */
 @Composable
 private fun ShoplyDrawerContent(
     displayName: String,
@@ -394,7 +398,6 @@ private fun ShoplyDrawerContent(
         Column(
             modifier = Modifier.padding(ShoplySpacing.medium)
         ) {
-            // כותרת
             Text(
                 text = "Shoply",
                 style = MaterialTheme.typography.headlineMedium,
@@ -405,7 +408,6 @@ private fun ShoplyDrawerContent(
                 )
             )
 
-            // שם המשתמשת
             if (displayName.isNotBlank()) {
                 Text(
                     text = "שלום, $displayName",
@@ -418,7 +420,6 @@ private fun ShoplyDrawerContent(
                 )
             }
 
-            // תגית "מנהל" - רק אם admin
             if (isAdmin) {
                 Text(
                     text = "מנהל מערכת",
@@ -435,7 +436,6 @@ private fun ShoplyDrawerContent(
                 modifier = Modifier.padding(vertical = ShoplySpacing.small)
             )
 
-            // פריטי ניווט
             DrawerItem(
                 icon = Icons.Default.Home,
                 label = "דף הבית",
@@ -473,9 +473,6 @@ private fun ShoplyDrawerContent(
     }
 }
 
-/**
- * פריט בודד ב-Drawer
- */
 @Composable
 private fun DrawerItem(
     icon: ImageVector,
@@ -491,14 +488,12 @@ private fun DrawerItem(
     )
 }
 
-/**
- * כרטיס פריט בודד
- */
 @Composable
 private fun ShoppingItemCard(
     item: ShoppingItem,
     isAdmin: Boolean,
     selectedTab: Int,
+    isChecked: Boolean,
     onToggleChecked: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -508,7 +503,7 @@ private fun ShoppingItemCard(
                 Text(
                     text = item.title,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = if (item.isChecked) {
+                    color = if (isChecked) {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     } else {
                         MaterialTheme.colorScheme.onSurface
@@ -520,7 +515,7 @@ private fun ShoppingItemCard(
             },
             leadingContent = {
                 Checkbox(
-                    checked = item.isChecked,
+                    checked = isChecked,
                     onCheckedChange = { onToggleChecked() }
                 )
             },
@@ -542,9 +537,6 @@ private fun ShoppingItemCard(
     }
 }
 
-/**
- * קומפוננטת Chips לסינון קטגוריות
- */
 @Composable
 fun CategoryChips(
     allItems: List<ShoppingItem>,
