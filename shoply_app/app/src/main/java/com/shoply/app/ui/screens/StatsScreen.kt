@@ -31,7 +31,16 @@ import com.shoply.app.ui.state.UiState
 import com.shoply.app.ui.theme.ShoplySpacing
 import com.shoply.app.viewmodel.ShoppingViewModel
 import androidx.compose.runtime.setValue
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.TextButton
 
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(
     viewModel: ShoppingViewModel
@@ -39,6 +48,8 @@ fun StatsScreen(
     val completedListsState by viewModel.completedListsUiState.collectAsStateWithLifecycle()
     var startDate by remember { mutableStateOf<Long?>(null) }
     var endDate by remember { mutableStateOf<Long?>(null) }
+    var showStartDatePicker by remember { mutableStateOf(false) }
+    var showEndDatePicker by remember { mutableStateOf(false) }
 
     when (val state = completedListsState) {
         is UiState.Loading -> {
@@ -122,14 +133,50 @@ fun StatsScreen(
                                 containerColor = MaterialTheme.colorScheme.surface
                             )
                         ) {
-                            Row(
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                Text("טווח תאריכים:")
-                                Text("הכל")
+                                Text(
+                                    text = "טווח תאריכים",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { showStartDatePicker = true },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(
+                                            text = startDate?.let { formatTimestamp(it) } ?: "מתאריך"
+                                        )
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = { showEndDatePicker = true },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(
+                                            text = endDate?.let { formatTimestamp(it) } ?: "עד תאריך"
+                                        )
+                                    }
+                                }
+
+                                if (startDate != null || endDate != null) {
+                                    TextButton(
+                                        onClick = {
+                                            startDate = null
+                                            endDate = null
+                                        }
+                                    ) {
+                                        Text("נקה סינון")
+                                    }
+                                }
                             }
                         }
                     }
@@ -171,26 +218,54 @@ fun StatsScreen(
 
                     item {
                         SectionCard(title = "פילוח לפי סופרים") {
-                            totalsByStore.forEach { (store, total) ->
-                                val count = purchasesCountByStore[store] ?: 0
+                            val maxStoreTotal = totalsByStore.values.maxOrNull() ?: 1.0
 
-                                StatsRow(
-                                    title = store,
-                                    subtitle = "$count רשימות",
-                                    value = "₪%.2f".format(total)
-                                )
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                totalsByStore.forEach { (store, total) ->
+                                    Column {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(store)
+                                            Text("₪%.2f".format(total))
+                                        }
+
+                                        Spacer(modifier = Modifier.height(4.dp))
+
+                                        LinearProgressIndicator(
+                                            progress = { (total / maxStoreTotal).toFloat() },
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
 
                     item {
                         SectionCard(title = "פילוח לפי קטגוריות") {
-                            categoryCounts.forEach { (category, count) ->
-                                StatsRow(
-                                    title = category,
-                                    subtitle = null,
-                                    value = "$count"
-                                )
+                            val maxCategoryCount = categoryCounts.values.maxOrNull() ?: 1
+
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                categoryCounts.forEach { (category, count) ->
+                                    Column {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(category)
+                                            Text("$count מוצרים")
+                                        }
+
+                                        Spacer(modifier = Modifier.height(4.dp))
+
+                                        LinearProgressIndicator(
+                                            progress = { count.toFloat() / maxCategoryCount.toFloat() },
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -214,6 +289,66 @@ fun StatsScreen(
                     }
                 }
             }
+        }
+    }
+
+
+
+    if (showStartDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = startDate
+        )
+
+        DatePickerDialog(
+            onDismissRequest = { showStartDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        startDate = datePickerState.selectedDateMillis
+                        showStartDatePicker = false
+                    }
+                ) {
+                    Text("אישור")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showStartDatePicker = false }
+                ) {
+                    Text("ביטול")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    if (showEndDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = endDate
+        )
+
+        DatePickerDialog(
+            onDismissRequest = { showEndDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        endDate = datePickerState.selectedDateMillis
+                        showEndDatePicker = false
+                    }
+                ) {
+                    Text("אישור")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showEndDatePicker = false }
+                ) {
+                    Text("ביטול")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }
