@@ -257,6 +257,9 @@ fun MainScreen(
                         }
                         val pendingItems = filteredItems.filter { !it.isChecked }
                         val purchasedItems = filteredItems.filter { it.isChecked }
+                        val totalItemsCount = filteredItems.size
+                        val pendingItemsCount = pendingItems.size
+                        val purchasedItemsCount = purchasedItems.size
 
                         OutlinedTextField(
                             value = searchQuery,
@@ -316,7 +319,14 @@ fun MainScreen(
                                     contentPadding = PaddingValues(ShoplySpacing.medium),
                                     verticalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
                                 ) {
-                                    if (pendingItems.isNotEmpty()) {
+                                    if (pendingItems.isNotEmpty()){
+                                        item {
+                                            ShoppingListSummarySection(
+                                                totalItems = totalItemsCount,
+                                                pendingItems = pendingItemsCount,
+                                                purchasedItems = purchasedItemsCount
+                                            )
+                                        }
                                         item {
                                             Text(
                                                 text = "לקנייה",
@@ -676,6 +686,67 @@ private fun ShoppingItem.toProductUiModel(isInMyList: Boolean): ProductUiModel {
 }
 
 
+@Composable
+private fun ShoppingListSummarySection(
+    totalItems: Int,
+    pendingItems: Int,
+    purchasedItems: Int
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = ShoplySpacing.small),
+        horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
+    ) {
+        SummaryChip(
+            title = "סה\"כ",
+            value = totalItems.toString(),
+            modifier = Modifier.weight(1f)
+        )
+        SummaryChip(
+            title = "לקנייה",
+            value = pendingItems.toString(),
+            modifier = Modifier.weight(1f)
+        )
+        SummaryChip(
+            title = "נרכשו",
+            value = purchasedItems.toString(),
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun SummaryChip(
+    title: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
 @Composable
 fun CategoryChips(
     allItems: List<ShoppingItem>,
