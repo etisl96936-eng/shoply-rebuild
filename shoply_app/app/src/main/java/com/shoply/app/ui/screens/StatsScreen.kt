@@ -26,7 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.shoply.app.data.CompletedShoppingList
 import com.shoply.app.ui.state.UiState
 import com.shoply.app.ui.theme.ShoplySpacing
 import com.shoply.app.viewmodel.ShoppingViewModel
@@ -81,106 +80,122 @@ fun StatsScreen(
             val completedLists = state.data
             val filteredLists = completedLists.filter { list ->
                 val afterStart = startDate?.let { list.completedAt >= it } ?: true
-                val beforeEnd = endDate?.let { list.completedAt <= it } ?: true
+                val beforeEnd = endDate?.let { end ->
+                    val endOfDay = end + (24 * 60 * 60 * 1000) - 1
+                    list.completedAt <= endOfDay
+                } ?: true
                 afterStart && beforeEnd
             }
 
-            if (filteredLists.isEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+            val totalLists = filteredLists.size
+            val totalSpent = filteredLists.sumOf { it.totalAmount }
+
+            val totalsByStore = filteredLists
+                .groupBy { it.selectedStore }
+                .mapValues { (_, lists) -> lists.sumOf { it.totalAmount } }
+
+            val purchasesCountByStore = filteredLists
+                .groupBy { it.selectedStore }
+                .mapValues { (_, lists) -> lists.size }
+
+            val categoryCounts = filteredLists
+                .flatMap { it.items }
+                .groupBy { it.category }
+                .mapValues { (_, items) -> items.size }
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(ShoplySpacing.medium),
+                verticalArrangement = Arrangement.spacedBy(ShoplySpacing.medium)
+            ) {
+                item {
                     Text(
-                        text = "אין עדיין רשימות שהושלמו",
-                        style = MaterialTheme.typography.bodyLarge
+                        text = "סטטיסטיקות",
+                        style = MaterialTheme.typography.headlineSmall
                     )
                 }
-            } else {
-                val totalLists = filteredLists.size
-                val totalSpent = filteredLists.sumOf { it.totalAmount }
 
-                val totalsByStore = filteredLists
-                    .groupBy { it.selectedStore }
-                    .mapValues { (_, lists) -> lists.sumOf { it.totalAmount } }
-
-                val purchasesCountByStore = filteredLists
-                    .groupBy { it.selectedStore }
-                    .mapValues { (_, lists) -> lists.size }
-
-                val categoryCounts = filteredLists
-                    .flatMap { it.items }
-                    .groupBy { it.category }
-                    .mapValues { (_, items) -> items.size }
-
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(ShoplySpacing.medium),
-                    verticalArrangement = Arrangement.spacedBy(ShoplySpacing.medium)
-                ) {
-                    item {
-                        Text(
-                            text = "סטטיסטיקות",
-                            style = MaterialTheme.typography.headlineSmall
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
                         )
-                    }
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                text = "טווח תאריכים",
+                                style = MaterialTheme.typography.titleMedium
+                            )
 
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
+                            ) {
+                                OutlinedButton(
+                                    onClick = { showStartDatePicker = true },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(startDate?.let { formatTimestamp(it) } ?: "מתאריך")
+                                }
+
+                                OutlinedButton(
+                                    onClick = { showEndDatePicker = true },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(endDate?.let { formatTimestamp(it) } ?: "עד תאריך")
+                                }
+                            }
+
+                            if (startDate != null || endDate != null) {
+                                TextButton(
+                                    onClick = {
+                                        startDate = null
+                                        endDate = null
+                                    }
+                                ) {
+                                    Text("נקה סינון")
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (filteredLists.isEmpty()) {
                     item {
                         Card(
                             colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surface
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
                             )
                         ) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(16.dp),
+                                    .padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 Text(
-                                    text = "טווח תאריכים",
-                                    style = MaterialTheme.typography.titleMedium
+                                    text = "אין רשימות בטווח התאריכים שנבחר",
+                                    style = MaterialTheme.typography.bodyLarge
                                 )
 
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
+                                TextButton(
+                                    onClick = {
+                                        startDate = null
+                                        endDate = null
+                                    }
                                 ) {
-                                    OutlinedButton(
-                                        onClick = { showStartDatePicker = true },
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Text(
-                                            text = startDate?.let { formatTimestamp(it) } ?: "מתאריך"
-                                        )
-                                    }
-
-                                    OutlinedButton(
-                                        onClick = { showEndDatePicker = true },
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Text(
-                                            text = endDate?.let { formatTimestamp(it) } ?: "עד תאריך"
-                                        )
-                                    }
-                                }
-
-                                if (startDate != null || endDate != null) {
-                                    TextButton(
-                                        onClick = {
-                                            startDate = null
-                                            endDate = null
-                                        }
-                                    ) {
-                                        Text("נקה סינון")
-                                    }
+                                    Text("נקה סינון")
                                 }
                             }
                         }
                     }
-
+                } else {
                     item {
                         Card(
                             colors = CardDefaults.cardColors(
@@ -234,7 +249,7 @@ fun StatsScreen(
                                         Spacer(modifier = Modifier.height(4.dp))
 
                                         LinearProgressIndicator(
-                                            progress = { (total / maxStoreTotal).toFloat() },
+                                            progress = (total / maxStoreTotal).toFloat(),
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                     }
@@ -261,7 +276,7 @@ fun StatsScreen(
                                         Spacer(modifier = Modifier.height(4.dp))
 
                                         LinearProgressIndicator(
-                                            progress = { count.toFloat() / maxCategoryCount.toFloat() },
+                                            progress = count.toFloat() / maxCategoryCount.toFloat(),
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                     }
