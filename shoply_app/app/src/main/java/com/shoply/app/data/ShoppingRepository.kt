@@ -172,4 +172,13 @@ class ShoppingRepository {
             shoppingListCollection.document(item.id).delete().await()
         }
     }
+
+    suspend fun deleteCompletedList(uid: String, listId: String) {
+        firestore.collection("users")
+            .document(uid)
+            .collection("completed_lists")
+            .document(listId)
+            .delete()
+            .await()
+    }
 }

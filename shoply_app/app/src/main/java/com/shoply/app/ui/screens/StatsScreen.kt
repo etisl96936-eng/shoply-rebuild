@@ -78,12 +78,12 @@ fun StatsScreen(
 
         is UiState.Success -> {
             val completedLists = state.data
+            val startBoundary = startDate?.let { pickerUtcMillisToLocalStartOfDay(it) }
+            val endBoundary = endDate?.let { pickerUtcMillisToLocalEndOfDay(it) }
+
             val filteredLists = completedLists.filter { list ->
-                val afterStart = startDate?.let { list.completedAt >= it } ?: true
-                val beforeEnd = endDate?.let { end ->
-                    val endOfDay = end + (24 * 60 * 60 * 1000) - 1
-                    list.completedAt <= endOfDay
-                } ?: true
+                val afterStart = startBoundary?.let { list.completedAt >= it } ?: true
+                val beforeEnd = endBoundary?.let { list.completedAt <= it } ?: true
                 afterStart && beforeEnd
             }
 
@@ -463,4 +463,44 @@ private fun StatsRow(
 private fun formatTimestamp(timestamp: Long): String {
     val formatter = java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale("he"))
     return formatter.format(java.util.Date(timestamp))
+}
+
+private fun pickerUtcMillisToLocalStartOfDay(millis: Long): Long {
+    val utcCalendar = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply {
+        timeInMillis = millis
+    }
+
+    val year = utcCalendar.get(java.util.Calendar.YEAR)
+    val month = utcCalendar.get(java.util.Calendar.MONTH)
+    val day = utcCalendar.get(java.util.Calendar.DAY_OF_MONTH)
+
+    return java.util.Calendar.getInstance().apply {
+        set(java.util.Calendar.YEAR, year)
+        set(java.util.Calendar.MONTH, month)
+        set(java.util.Calendar.DAY_OF_MONTH, day)
+        set(java.util.Calendar.HOUR_OF_DAY, 0)
+        set(java.util.Calendar.MINUTE, 0)
+        set(java.util.Calendar.SECOND, 0)
+        set(java.util.Calendar.MILLISECOND, 0)
+    }.timeInMillis
+}
+
+private fun pickerUtcMillisToLocalEndOfDay(millis: Long): Long {
+    val utcCalendar = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply {
+        timeInMillis = millis
+    }
+
+    val year = utcCalendar.get(java.util.Calendar.YEAR)
+    val month = utcCalendar.get(java.util.Calendar.MONTH)
+    val day = utcCalendar.get(java.util.Calendar.DAY_OF_MONTH)
+
+    return java.util.Calendar.getInstance().apply {
+        set(java.util.Calendar.YEAR, year)
+        set(java.util.Calendar.MONTH, month)
+        set(java.util.Calendar.DAY_OF_MONTH, day)
+        set(java.util.Calendar.HOUR_OF_DAY, 23)
+        set(java.util.Calendar.MINUTE, 59)
+        set(java.util.Calendar.SECOND, 59)
+        set(java.util.Calendar.MILLISECOND, 999)
+    }.timeInMillis
 }

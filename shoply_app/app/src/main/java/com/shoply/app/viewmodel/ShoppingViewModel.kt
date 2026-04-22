@@ -161,4 +161,13 @@ class ShoppingViewModel : ViewModel() {
             )
         }
     }
+
+    fun deleteCompletedList(listId: String) {
+        val uid = currentUid
+        if (uid.isBlank()) return
+
+        viewModelScope.launch {
+            repository.deleteCompletedList(uid, listId)
+        }
+    }
 }
