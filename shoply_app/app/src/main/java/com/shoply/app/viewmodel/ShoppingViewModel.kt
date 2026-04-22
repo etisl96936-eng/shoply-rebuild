@@ -31,6 +31,13 @@ class ShoppingViewModel : ViewModel() {
     private val currentUid: String
         get() = auth.currentUser?.uid.orEmpty()
 
+    private val _selectedStore = MutableStateFlow<String?>(null)
+    val selectedStore: StateFlow<String?> = _selectedStore
+
+    fun selectStore(storeName: String) {
+        _selectedStore.value = storeName
+    }
+
     val catalogUiState: StateFlow<UiState<List<ShoppingItem>>> = repository.getItemsFlow()
         .map { items ->
             UiState.Success(items) as UiState<List<ShoppingItem>>

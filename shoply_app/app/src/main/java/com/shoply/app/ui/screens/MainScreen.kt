@@ -73,7 +73,7 @@ fun MainScreen(
     var selectedCategory by remember { mutableStateOf<String?>(null) }
 
     var selectedTab by remember { mutableStateOf(0) }
-    var selectedStore by remember { mutableStateOf<String?>(null) }
+    val selectedStore by viewModel.selectedStore.collectAsState()
 
     val closeDrawerAnd: (action: () -> Unit) -> Unit = { action ->
         scope.launch { drawerState.close() }
@@ -387,7 +387,7 @@ fun MainScreen(
                                         StoreTotalsSection(
                                             totalsByStore = totalsByStore,
                                             selectedStore = selectedStore,
-                                            onStoreSelected = { selectedStore = it }
+                                            onStoreSelected = { viewModel.selectStore(it) }
                                         )
                                     }
                                 }
