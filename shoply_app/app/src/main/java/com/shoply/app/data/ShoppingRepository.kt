@@ -1,16 +1,22 @@
 package com.shoply.app.data.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
+import com.shoply.app.data.CompletedShoppingList
 import com.shoply.app.data.ShoppingItem
+import com.shoply.app.data.ShoppingList
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import com.shoply.app.data.CompletedShoppingList
 
 class ShoppingRepository {
     private val firestore = FirebaseFirestore.getInstance()
     private val itemsCollection = firestore.collection("items")
+
+    private fun shoppingListsCollection(uid: String) =
+        firestore.collection("users")
+            .document(uid)
+            .collection("shopping_lists")
 
     // קטלוג גלובלי
     fun getItemsFlow(): Flow<List<ShoppingItem>> = callbackFlow {
@@ -29,7 +35,7 @@ class ShoppingRepository {
         awaitClose { subscription.remove() }
     }
 
-    // רשימת קניות אישית של משתמש
+    // רשימת קניות אישית של משתמש - המבנה הישן
     fun getUserShoppingListFlow(uid: String): Flow<List<ShoppingItem>> = callbackFlow {
         val subscription = firestore
             .collection("users")
@@ -68,6 +74,80 @@ class ShoppingRepository {
         awaitClose { subscription.remove() }
     }
 
+    // =========================
+    // Shopping Lists - מבנה חדש
+    // =========================
+
+    suspend fun createShoppingList(
+        uid: String,
+        name: String
+    ): Result<String> = runCatching {
+        val newDoc = shoppingListsCollection(uid).document()
+
+        val shoppingList = ShoppingList(
+            id = newDoc.id,
+            ownerUid = uid,
+            name = name.ifBlank { "רשימה חדשה" },
+            status = ShoppingList.STATUS_ACTIVE,
+            createdAt = System.currentTimeMillis(),
+            updatedAt = System.currentTimeMillis()
+        )
+
+        newDoc.set(shoppingList).await()
+        newDoc.id
+    }
+
+    suspend fun getActiveShoppingLists(uid: String): Result<List<ShoppingList>> = runCatching {
+        val snapshot = shoppingListsCollection(uid)
+            .whereEqualTo("status", ShoppingList.STATUS_ACTIVE)
+            .get()
+            .await()
+
+        snapshot.documents.mapNotNull { doc ->
+            doc.toObject(ShoppingList::class.java)?.copy(id = doc.id)
+        }.sortedByDescending { it.updatedAt }
+    }
+
+    suspend fun updateShoppingListName(
+        uid: String,
+        listId: String,
+        newName: String
+    ): Result<Unit> = runCatching {
+        shoppingListsCollection(uid)
+            .document(listId)
+            .update(
+                mapOf(
+                    "name" to newName,
+                    "updatedAt" to System.currentTimeMillis()
+                )
+            )
+            .await()
+    }
+
+    suspend fun archiveShoppingList(
+        uid: String,
+        listId: String
+    ): Result<Unit> = runCatching {
+        shoppingListsCollection(uid)
+            .document(listId)
+            .update(
+                mapOf(
+                    "status" to ShoppingList.STATUS_ARCHIVED,
+                    "updatedAt" to System.currentTimeMillis()
+                )
+            )
+            .await()
+    }
+
+    suspend fun deleteShoppingList(
+        uid: String,
+        listId: String
+    ): Result<Unit> = runCatching {
+        shoppingListsCollection(uid)
+            .document(listId)
+            .delete()
+            .await()
+    }
 
     // הוספת מוצר לקטלוג הגלובלי
     suspend fun addItem(item: ShoppingItem) {
@@ -87,7 +167,7 @@ class ShoppingRepository {
         }
     }
 
-    // הוספת מוצר לרשימה האישית
+    // הוספת מוצר לרשימה האישית - המבנה הישן
     suspend fun addToUserShoppingList(uid: String, item: ShoppingItem) {
         if (uid.isBlank() || item.id.isBlank()) return
 
@@ -99,7 +179,7 @@ class ShoppingRepository {
             .await()
     }
 
-    // הסרת מוצר מהרשימה האישית
+    // הסרת מוצר מהרשימה האישית - המבנה הישן
     suspend fun removeFromUserShoppingList(uid: String, itemId: String) {
         if (uid.isBlank() || itemId.isBlank()) return
 
@@ -111,7 +191,7 @@ class ShoppingRepository {
             .await()
     }
 
-    // סימון/ביטול מוצר ברשימה האישית
+    // סימון/ביטול מוצר ברשימה האישית - המבנה הישן
     suspend fun toggleItemInUserShoppingList(uid: String, item: ShoppingItem) {
         if (uid.isBlank() || item.id.isBlank()) return
 
@@ -129,7 +209,7 @@ class ShoppingRepository {
         }
     }
 
-    // עדכון מצב נקנה בתוך הרשימה האישית
+    // עדכון מצב נקנה בתוך הרשימה האישית - המבנה הישן
     suspend fun updatePurchasedInUserShoppingList(uid: String, itemId: String, isChecked: Boolean) {
         if (uid.isBlank() || itemId.isBlank()) return
 
