@@ -94,6 +94,39 @@ class ShoppingViewModel : ViewModel() {
         MutableStateFlow<UiState<String>?>(null)
     val shoppingListActionState: StateFlow<UiState<String>?> = _shoppingListActionState
 
+    private val _currentShoppingListId = MutableStateFlow<String?>(null)
+
+    val shoppingListItemsUiState: StateFlow<UiState<List<ShoppingItem>>> =
+        _currentShoppingListId
+            .flatMapLatest { listId ->
+                if (listId.isNullOrBlank()) {
+                    flowOf(UiState.Success(emptyList()))
+                } else {
+                    currentUidFlow.flatMapLatest { uid ->
+                        if (uid.isBlank()) {
+                            flowOf(UiState.Error("לא נמצא משתמש מחובר"))
+                        } else {
+                            repository.getShoppingListItemsFlow(uid, listId)
+                                .map { items ->
+                                    UiState.Success(items) as UiState<List<ShoppingItem>>
+                                }
+                                .catch { e ->
+                                    emit(UiState.Error(e.message ?: "שגיאה בטעינת פריטי הרשימה"))
+                                }
+                        }
+                    }
+                }
+            }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = UiState.Loading
+            )
+
+    private val _shoppingListItemsActionState =
+        MutableStateFlow<UiState<String>?>(null)
+    val shoppingListItemsActionState: StateFlow<UiState<String>?> = _shoppingListItemsActionState
+
     fun loadActiveShoppingLists() {
         val uid = currentUid
         if (uid.isBlank()) {
@@ -211,6 +244,81 @@ class ShoppingViewModel : ViewModel() {
 
     fun clearShoppingListActionState() {
         _shoppingListActionState.value = null
+    }
+
+    fun setCurrentShoppingList(listId: String) {
+        _currentShoppingListId.value = listId
+    }
+
+    fun addItemToCurrentShoppingList(listId: String, itemName: String) {
+        val uid = currentUid
+        if (uid.isBlank()) {
+            _shoppingListItemsActionState.value = UiState.Error("לא נמצא משתמש מחובר")
+            return
+        }
+
+        if (itemName.isBlank()) {
+            _shoppingListItemsActionState.value = UiState.Error("שם פריט לא יכול להיות ריק")
+            return
+        }
+
+        viewModelScope.launch {
+            _shoppingListItemsActionState.value = UiState.Loading
+
+            val result = repository.addItemToShoppingList(uid, listId, itemName.trim())
+            _shoppingListItemsActionState.value = result.fold(
+                onSuccess = { UiState.Success("הפריט נוסף לרשימה") },
+                onFailure = { error ->
+                    UiState.Error(error.message ?: "שגיאה בהוספת פריט לרשימה")
+                }
+            )
+        }
+    }
+
+    fun toggleItemCheckedInCurrentShoppingList(listId: String, item: ShoppingItem) {
+        val uid = currentUid
+        if (uid.isBlank()) {
+            _shoppingListItemsActionState.value = UiState.Error("לא נמצא משתמש מחובר")
+            return
+        }
+
+        viewModelScope.launch {
+            val result = repository.updateItemCheckedInShoppingList(
+                uid = uid,
+                listId = listId,
+                itemId = item.id,
+                isChecked = !item.isChecked
+            )
+
+            _shoppingListItemsActionState.value = result.fold(
+                onSuccess = { null },
+                onFailure = { error ->
+                    UiState.Error(error.message ?: "שגיאה בעדכון הפריט")
+                }
+            )
+        }
+    }
+
+    fun deleteItemFromCurrentShoppingList(listId: String, itemId: String) {
+        val uid = currentUid
+        if (uid.isBlank()) {
+            _shoppingListItemsActionState.value = UiState.Error("לא נמצא משתמש מחובר")
+            return
+        }
+
+        viewModelScope.launch {
+            val result = repository.deleteItemFromShoppingList(uid, listId, itemId)
+            _shoppingListItemsActionState.value = result.fold(
+                onSuccess = { UiState.Success("הפריט נמחק") },
+                onFailure = { error ->
+                    UiState.Error(error.message ?: "שגיאה במחיקת פריט")
+                }
+            )
+        }
+    }
+
+    fun clearShoppingListItemsActionState() {
+        _shoppingListItemsActionState.value = null
     }
 
     // =========================

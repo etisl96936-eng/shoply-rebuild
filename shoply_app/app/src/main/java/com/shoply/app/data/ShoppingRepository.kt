@@ -18,6 +18,18 @@ class ShoppingRepository {
             .document(uid)
             .collection("shopping_lists")
 
+    private fun shoppingListItemsCollection(uid: String, listId: String) =
+        shoppingListsCollection(uid)
+            .document(listId)
+            .collection("items")
+
+    private suspend fun updateShoppingListTimestamp(uid: String, listId: String) {
+        shoppingListsCollection(uid)
+            .document(listId)
+            .update("updatedAt", System.currentTimeMillis())
+            .await()
+    }
+
     // קטלוג גלובלי
     fun getItemsFlow(): Flow<List<ShoppingItem>> = callbackFlow {
         val subscription = itemsCollection
@@ -147,6 +159,75 @@ class ShoppingRepository {
             .document(listId)
             .delete()
             .await()
+    }
+
+    fun getShoppingListItemsFlow(uid: String, listId: String): Flow<List<ShoppingItem>> = callbackFlow {
+        val subscription = shoppingListItemsCollection(uid, listId)
+            .orderBy("timestamp")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+
+                val items = snapshot?.toObjects(ShoppingItem::class.java) ?: emptyList()
+                trySend(items)
+            }
+
+        awaitClose { subscription.remove() }
+    }
+
+    suspend fun addItemToShoppingList(
+        uid: String,
+        listId: String,
+        itemName: String
+    ): Result<Unit> = runCatching {
+        val newDoc = shoppingListItemsCollection(uid, listId).document()
+
+        val item = ShoppingItem(
+            id = newDoc.id,
+            title = itemName,
+            quantity = "1",
+            category = "כללי",
+            description = "",
+            isChecked = false,
+            timestamp = System.currentTimeMillis()
+        )
+
+        newDoc.set(item).await()
+        updateShoppingListTimestamp(uid, listId)
+    }
+
+    suspend fun updateItemCheckedInShoppingList(
+        uid: String,
+        listId: String,
+        itemId: String,
+        isChecked: Boolean
+    ): Result<Unit> = runCatching {
+        shoppingListItemsCollection(uid, listId)
+            .document(itemId)
+            .update(
+                mapOf(
+                    "isChecked" to isChecked,
+                    "updatedAt" to System.currentTimeMillis()
+                )
+            )
+            .await()
+
+        updateShoppingListTimestamp(uid, listId)
+    }
+
+    suspend fun deleteItemFromShoppingList(
+        uid: String,
+        listId: String,
+        itemId: String
+    ): Result<Unit> = runCatching {
+        shoppingListItemsCollection(uid, listId)
+            .document(itemId)
+            .delete()
+            .await()
+
+        updateShoppingListTimestamp(uid, listId)
     }
 
     // הוספת מוצר לקטלוג הגלובלי

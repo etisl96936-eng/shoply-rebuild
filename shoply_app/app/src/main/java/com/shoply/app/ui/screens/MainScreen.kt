@@ -1,7 +1,15 @@
 package com.shoply.app.ui.screens
 
 import android.app.Activity
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -14,7 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
@@ -23,9 +30,13 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -33,8 +44,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import com.shoply.app.data.ProductUiModel
 import com.shoply.app.data.ShoppingItem
-import com.shoply.app.ui.components.*
+import com.shoply.app.data.StorePrice
+import com.shoply.app.ui.components.ErrorView
+import com.shoply.app.ui.components.LoadingView
+import com.shoply.app.ui.components.ProductPriceCard
+import com.shoply.app.ui.components.ShoplyAlertDialog
+import com.shoply.app.ui.components.ShoplyButton
+import com.shoply.app.ui.components.ShoplyTextField
+import com.shoply.app.ui.navigation.Screen
 import com.shoply.app.ui.state.UiState
 import com.shoply.app.ui.theme.ShoplyResponsive
 import com.shoply.app.ui.theme.ShoplySpacing
@@ -42,12 +61,6 @@ import com.shoply.app.ui.theme.rememberShoplyWindowSize
 import com.shoply.app.viewmodel.AuthViewModel
 import com.shoply.app.viewmodel.ShoppingViewModel
 import kotlinx.coroutines.launch
-import com.shoply.app.data.ProductUiModel
-import com.shoply.app.data.StorePrice
-import com.shoply.app.ui.components.ProductPriceCard
-import com.shoply.app.ui.navigation.Screen
-import androidx.compose.material.icons.filled.History
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
@@ -59,7 +72,6 @@ fun MainScreen(
     activity: Activity
 ) {
     val catalogState by viewModel.catalogUiState.collectAsStateWithLifecycle()
-    val shoppingListState by viewModel.shoppingListUiState.collectAsStateWithLifecycle()
 
     val windowSize = rememberShoplyWindowSize(activity)
     val gridColumns = ShoplyResponsive.gridColumns(windowSize)
@@ -73,14 +85,7 @@ fun MainScreen(
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
-
-    var selectedTab by remember { mutableStateOf(0) }
-    val selectedStore by viewModel.selectedStore.collectAsState()
-
-    var pendingStoreSelection by remember { mutableStateOf<String?>(null) }
-    var showStoreConfirmationDialog by remember { mutableStateOf(false) }
-    var lockedStore by remember { mutableStateOf<String?>(null) }
-    var showCompleteListDialog by remember { mutableStateOf(false) }
+    var showCatalogHintDialog by remember { mutableStateOf(false) }
 
     val closeDrawerAnd: (action: () -> Unit) -> Unit = { action ->
         scope.launch { drawerState.close() }
@@ -94,35 +99,29 @@ fun MainScreen(
                 displayName = displayName,
                 isAdmin = isAdmin,
                 onHomeClick = { closeDrawerAnd { } },
-
                 onProfileClick = {
                     closeDrawerAnd { navController.navigate("profile") }
                 },
-
                 onStatsClick = {
                     closeDrawerAnd {
                         navController.navigate(Screen.Stats.route)
                     }
                 },
-
                 onCompletedListsClick = {
                     closeDrawerAnd {
                         navController.navigate("completed_lists")
                     }
                 },
-
                 onMyListsClick = {
                     closeDrawerAnd {
                         navController.navigate(Screen.MyLists.route)
                     }
                 },
-
                 onSettingsClick = {
                     closeDrawerAnd {
                         // TODO: מסך הגדרות
                     }
                 },
-
                 onLogoutClick = {
                     closeDrawerAnd { showLogoutDialog = true }
                 }
@@ -133,9 +132,9 @@ fun MainScreen(
             topBar = {
                 TopAppBar(
                     navigationIcon = {
-                        IconButton(onClick = {
-                            scope.launch { drawerState.open() }
-                        }) {
+                        IconButton(
+                            onClick = { scope.launch { drawerState.open() } }
+                        ) {
                             Icon(
                                 imageVector = Icons.Default.Menu,
                                 contentDescription = "תפריט"
@@ -151,6 +150,13 @@ fun MainScreen(
                         Text(title)
                     },
                     actions = {
+                        IconButton(onClick = { navController.navigate(Screen.MyLists.route) }) {
+                            Icon(
+                                imageVector = Icons.Default.List,
+                                contentDescription = "הרשימות שלי"
+                            )
+                        }
+
                         IconButton(onClick = { navController.navigate("profile") }) {
                             Icon(
                                 imageVector = Icons.Default.Person,
@@ -167,48 +173,8 @@ fun MainScreen(
                     }
                 )
             },
-            bottomBar = {
-                NavigationBar {
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.List, contentDescription = null) },
-                        label = { Text("כל המוצרים") },
-                        selected = selectedTab == 0,
-                        onClick = {
-                            selectedTab = 0
-                            searchQuery = ""
-                            selectedCategory = null
-                        }
-                    )
-                    NavigationBarItem(
-                        icon = {
-                            BadgedBox(
-                                badge = {
-                                    when (val s = shoppingListState) {
-                                        is UiState.Success -> {
-                                            val count = s.data.size
-                                            if (count > 0) {
-                                                Badge { Text("$count") }
-                                            }
-                                        }
-                                        else -> {}
-                                    }
-                                }
-                            ) {
-                                Icon(Icons.Default.ShoppingCart, contentDescription = null)
-                            }
-                        },
-                        label = { Text("הרשימה שלי") },
-                        selected = selectedTab == 1,
-                        onClick = {
-                            selectedTab = 1
-                            searchQuery = ""
-                            selectedCategory = null
-                        }
-                    )
-                }
-            },
             floatingActionButton = {
-                if (selectedTab == 0 && isAdmin) {
+                if (isAdmin) {
                     FloatingActionButton(onClick = { showAddDialog = true }) {
                         Icon(Icons.Default.Add, contentDescription = "הוסף מוצר")
                     }
@@ -220,18 +186,11 @@ fun MainScreen(
                     .padding(padding)
                     .fillMaxSize()
             ) {
-                val currentState = if (selectedTab == 0) catalogState else shoppingListState
-
-                val shoppingListIds = when (val listState = shoppingListState) {
-                    is UiState.Success -> listState.data.map { it.id }.toSet()
-                    else -> emptySet()
-                }
-
-                when (val s = currentState) {
+                when (val s = catalogState) {
                     is UiState.Loading -> {
                         Box(modifier = Modifier.fillMaxSize()) {
                             LoadingView(
-                                message = "טוען את הרשימה שלך...",
+                                message = "טוען את הקטלוג...",
                                 modifier = Modifier.align(Alignment.Center)
                             )
                         }
@@ -254,7 +213,6 @@ fun MainScreen(
                             baseItems.filter { item ->
                                 selectedCategory == null || item.category == selectedCategory
                             }
-
                         } else {
                             val query = searchQuery.trim()
 
@@ -270,26 +228,12 @@ fun MainScreen(
                                 !item.title.startsWith(query, ignoreCase = true) &&
                                         (
                                                 item.title.contains(query, ignoreCase = true) ||
-                                                        item.description.contains(
-                                                            query,
-                                                            ignoreCase = true
-                                                        )
+                                                        item.description.contains(query, ignoreCase = true)
                                                 )
                             }
 
                             startsWithMatches + containsMatches
                         }
-                        val pendingItems = filteredItems.filter { !it.isChecked }
-                        val purchasedItems = filteredItems.filter { it.isChecked }
-                        val totalItemsCount = filteredItems.size
-                        val pendingItemsCount = pendingItems.size
-                        val purchasedItemsCount = purchasedItems.size
-                        val pendingProductsUi = pendingItems.map { it.toProductUiModel(isInMyList = true) }
-
-                        val totalsByStore = pendingProductsUi
-                            .flatMap { product -> product.storePrices }
-                            .groupBy { it.storeName }
-                            .mapValues { (_, prices) -> prices.sumOf { it.price } }
 
                         OutlinedTextField(
                             value = searchQuery,
@@ -298,7 +242,7 @@ fun MainScreen(
                                 .fillMaxWidth()
                                 .padding(horizontal = ShoplySpacing.medium)
                                 .padding(top = ShoplySpacing.small),
-                            placeholder = { Text("חפש מוצר...") },
+                            placeholder = { Text("חפש מוצר בקטלוג...") },
                             leadingIcon = {
                                 Icon(Icons.Default.Search, contentDescription = "חיפוש")
                             },
@@ -323,18 +267,22 @@ fun MainScreen(
 
                         Spacer(modifier = Modifier.height(ShoplySpacing.small))
 
+                        Text(
+                            text = "כאן מוצג הקטלוג בלבד. הוספת מוצרים לרשימה מתוך הקטלוג תחובר בשלב הבא.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = ShoplySpacing.medium)
+                        )
+
+                        Spacer(modifier = Modifier.height(ShoplySpacing.small))
+
                         if (filteredItems.isEmpty()) {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 Text(
-                                    text = when {
-                                        selectedTab == 1 && baseItems.isEmpty() ->
-                                            "הרשימה שלך ריקה.\nסמני מוצרים מ'כל המוצרים' כדי להוסיף אותם לכאן"
-
-                                        selectedTab == 0 && baseItems.isEmpty() ->
-                                            "אין פריטים בקטלוג. לחצי על ה-+ להוספה"
-
-                                        else ->
-                                            "לא נמצאו פריטים התואמים לחיפוש"
+                                    text = if (baseItems.isEmpty()) {
+                                        "אין פריטים בקטלוג. לחצי על ה־+ להוספה"
+                                    } else {
+                                        "לא נמצאו פריטים התואמים לחיפוש"
                                     },
                                     modifier = Modifier.align(Alignment.Center),
                                     style = MaterialTheme.typography.bodyMedium,
@@ -343,106 +291,18 @@ fun MainScreen(
                                 )
                             }
                         } else {
-                            if (selectedTab == 1) {
+                            if (windowSize.isCompact) {
                                 LazyColumn(
                                     modifier = Modifier.fillMaxSize(),
                                     contentPadding = PaddingValues(ShoplySpacing.medium),
                                     verticalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
                                 ) {
-                                    if (pendingItems.isNotEmpty()){
-                                        item {
-                                            ShoppingListSummarySection(
-                                                totalItems = totalItemsCount,
-                                                pendingItems = pendingItemsCount,
-                                                purchasedItems = purchasedItemsCount
-                                            )
-                                        }
-
-                                        item {
-                                            Text(
-                                                text = "לקנייה",
-                                                style = MaterialTheme.typography.titleMedium,
-                                                modifier = Modifier.padding(vertical = ShoplySpacing.small)
-                                            )
-                                        }
-
-                                        items(pendingItems) { item ->
-                                            ShoppingItemCard(
-                                                item = item,
-                                                isAdmin = isAdmin,
-                                                selectedTab = selectedTab,
-                                                isChecked = item.isChecked,
-                                                onToggleChecked = {
-                                                    viewModel.togglePurchasedInMyList(item)
-                                                },
-                                                onDelete = {
-                                                    viewModel.removeFromMyList(item.id)
-                                                }
-                                            )
-                                        }
-                                    }
-
-                                    if (purchasedItems.isNotEmpty()) {
-                                        item {
-                                            Text(
-                                                text = "נרכשו",
-                                                style = MaterialTheme.typography.titleMedium,
-                                                modifier = Modifier.padding(vertical = ShoplySpacing.small)
-                                            )
-                                        }
-
-                                        items(purchasedItems) { item ->
-                                            ShoppingItemCard(
-                                                item = item,
-                                                isAdmin = isAdmin,
-                                                selectedTab = selectedTab,
-                                                isChecked = item.isChecked,
-                                                onToggleChecked = {
-                                                    viewModel.togglePurchasedInMyList(item)
-                                                },
-                                                onDelete = {
-                                                    viewModel.removeFromMyList(item.id)
-                                                }
-                                            )
-                                        }
-                                    }
-                                    item {
-                                        StoreTotalsSection(
-                                            totalsByStore = totalsByStore,
-                                            selectedStore = selectedStore,
-                                            lockedStore = lockedStore,
-                                            onStoreSelected = {
-                                                pendingStoreSelection = it
-                                                showStoreConfirmationDialog = true
-                                            }
-                                        )
-                                    }
-                                    item {
-                                        Spacer(modifier = Modifier.height(ShoplySpacing.medium))
-
-                                        Button(
-                                            onClick = { showCompleteListDialog = true },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            enabled = selectedStore != null && filteredItems.isNotEmpty()
-                                        ) {
-                                            Text("סיים רשימה")
-                                        }
-                                    }
-                                }
-                            } else if (windowSize.isCompact) {
-                                LazyColumn(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentPadding = PaddingValues(ShoplySpacing.medium),
-                                    verticalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
-                                ) {
-                                    items(filteredItems) { item ->
+                                    items(filteredItems, key = { it.id }) { item ->
                                         ProductPriceCard(
-                                            product = item.toProductUiModel(
-                                                isInMyList = shoppingListIds.contains(item.id)
-                                            ),
+                                            product = item.toProductUiModel(isInMyList = false),
                                             isAdmin = isAdmin,
                                             onToggleInList = {
-                                                viewModel.toggleItemInMyList(item)
+                                                showCatalogHintDialog = true
                                             },
                                             onDelete = { itemToDelete = item }
                                         )
@@ -458,12 +318,10 @@ fun MainScreen(
                                 ) {
                                     items(filteredItems, key = { it.id }) { item ->
                                         ProductPriceCard(
-                                            product = item.toProductUiModel(
-                                                isInMyList = shoppingListIds.contains(item.id)
-                                            ),
+                                            product = item.toProductUiModel(isInMyList = false),
                                             isAdmin = isAdmin,
                                             onToggleInList = {
-                                                viewModel.toggleItemInMyList(item)
+                                                showCatalogHintDialog = true
                                             },
                                             onDelete = { itemToDelete = item }
                                         )
@@ -471,44 +329,6 @@ fun MainScreen(
                                 }
                             }
                         }
-
-
-                        if (showCompleteListDialog) {
-                            ShoplyAlertDialog(
-                                title = "סיום רשימה",
-                                message = "האם את בטוחה שברצונך לסיים את הרשימה ולהעביר אותה לסטטיסטיקות?",
-                                confirmText = "כן",
-                                dismissText = "לא",
-                                onConfirm = {
-                                    val selectedStoreName = selectedStore
-                                    val completedProductsUi = (pendingItems + purchasedItems)
-                                        .map { it.toProductUiModel(isInMyList = true) }
-
-                                    val totalForSelectedStore = if (selectedStoreName != null) {
-                                        completedProductsUi.sumOf { product ->
-                                            product.storePrices.firstOrNull { it.storeName == selectedStoreName }?.price ?: 0.0
-                                        }
-                                    } else {
-                                        0.0
-                                    }
-
-                                    if (selectedStoreName != null) {
-                                        viewModel.completeShoppingList(
-                                            items = pendingItems + purchasedItems,
-                                            selectedStore = selectedStoreName,
-                                            totalAmount = totalForSelectedStore
-                                        )
-                                    }
-
-                                    showCompleteListDialog = false
-                                },
-                                onDismiss = {
-                                    showCompleteListDialog = false
-                                }
-                            )
-                        }
-
-
                     }
                 }
             }
@@ -522,21 +342,19 @@ fun MainScreen(
                     }
                 )
             }
-            if (showStoreConfirmationDialog && pendingStoreSelection != null) {
+
+            if (showCatalogHintDialog) {
                 ShoplyAlertDialog(
-                    title = "בחירת סופר",
-                    message = "האם את מעוניינת לבצע את הקנייה בסופר ${pendingStoreSelection}?",
-                    confirmText = "כן",
-                    dismissText = "לא",
+                    title = "הוספה לרשימה",
+                    message = "בשלב הבא נחבר הוספת מוצרים מהקטלוג לרשימה פעילה. כרגע ניהול הרשימות מתבצע ממסך 'הרשימות שלי'.",
+                    confirmText = "מעולה",
+                    dismissText = "לרשימות שלי",
                     onConfirm = {
-                        lockedStore = pendingStoreSelection
-                        viewModel.selectStore(pendingStoreSelection!!)
-                        showStoreConfirmationDialog = false
-                        pendingStoreSelection = null
+                        showCatalogHintDialog = false
                     },
                     onDismiss = {
-                        showStoreConfirmationDialog = false
-                        pendingStoreSelection = null
+                        showCatalogHintDialog = false
+                        navController.navigate(Screen.MyLists.route)
                     }
                 )
             }
@@ -588,7 +406,7 @@ private fun ShoplyDrawerContent(
     onMyListsClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onLogoutClick: () -> Unit,
-){
+) {
     ModalDrawerSheet {
         Column(
             modifier = Modifier.padding(ShoplySpacing.medium)
@@ -694,84 +512,6 @@ private fun DrawerItem(
         modifier = Modifier.padding(horizontal = ShoplySpacing.small)
     )
 }
-@Composable
-private fun ShoppingItemCard(
-    item: ShoppingItem,
-    isAdmin: Boolean,
-    selectedTab: Int,
-    isChecked: Boolean,
-    onToggleChecked: () -> Unit,
-    onDelete: () -> Unit
-) {
-    val productUiModel = item.toProductUiModel(isInMyList = true)
-    val lowestPrice = productUiModel.storePrices.minOfOrNull { it.price }
-    ShoplyCard {
-        Column(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            ListItem(
-                headlineContent = {
-                    Text(
-                        text = item.title,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = if (isChecked) {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        },
-                        textDecoration = if (isChecked) {
-                            androidx.compose.ui.text.style.TextDecoration.LineThrough
-                        } else {
-                            androidx.compose.ui.text.style.TextDecoration.None
-                        }
-                    )
-                },
-                supportingContent = {
-                    Text("${item.quantity} | ${item.category}")
-                },
-                leadingContent = {
-                    Checkbox(
-                        checked = isChecked,
-                        onCheckedChange = { onToggleChecked() }
-                    )
-                },
-                trailingContent = {
-                    if (!isChecked) {
-                        IconButton(onClick = onDelete) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "הסר מהרשימה",
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
-                },
-                colors = ListItemDefaults.colors(
-                    containerColor = androidx.compose.ui.graphics.Color.Transparent
-                )
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        start = ShoplySpacing.medium,
-                        end = ShoplySpacing.medium,
-                        bottom = ShoplySpacing.medium
-                    ),
-                horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
-            ) {
-                productUiModel.storePrices.forEach { storePrice ->
-                    StorePriceChip(
-                        storeName = storePrice.storeName,
-                        price = storePrice.price,
-                        isHighlighted = storePrice.price == lowestPrice
-                    )
-                }
-            }
-        }
-    }
-}
 
 private fun ShoppingItem.toProductUiModel(isInMyList: Boolean): ProductUiModel {
     val mockPrices = when (title) {
@@ -807,68 +547,6 @@ private fun ShoppingItem.toProductUiModel(isInMyList: Boolean): ProductUiModel {
     )
 }
 
-
-@Composable
-private fun ShoppingListSummarySection(
-    totalItems: Int,
-    pendingItems: Int,
-    purchasedItems: Int
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = ShoplySpacing.small),
-        horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
-    ) {
-        SummaryChip(
-            title = "סה\"כ",
-            value = totalItems.toString(),
-            modifier = Modifier.weight(1f)
-        )
-        SummaryChip(
-            title = "לקנייה",
-            value = pendingItems.toString(),
-            modifier = Modifier.weight(1f)
-        )
-        SummaryChip(
-            title = "נרכשו",
-            value = purchasedItems.toString(),
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-@Composable
-private fun SummaryChip(
-    title: String,
-    value: String,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 12.dp, horizontal = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
 @Composable
 fun CategoryChips(
     allItems: List<ShoppingItem>,
@@ -902,75 +580,6 @@ fun CategoryChips(
                     },
                     label = { Text(category) }
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun StoreTotalsSection(
-    totalsByStore: Map<String, Double>,
-    selectedStore: String?,
-    lockedStore: String?,
-    onStoreSelected: (String) -> Unit
-) {
-    if (totalsByStore.isEmpty()) return
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = ShoplySpacing.medium)
-    ) {
-        Text(
-            text = "איפה עושים קנייה?",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = ShoplySpacing.small)
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
-        ) {
-
-            totalsByStore.forEach { (storeName, total) ->
-                val isLocked = lockedStore == storeName
-
-                Card(
-                    modifier = Modifier.weight(1f),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (selectedStore == storeName) {
-                            MaterialTheme.colorScheme.primaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.surfaceVariant
-                        }
-                    ),
-                    onClick = { onStoreSelected(storeName) }
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(10.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = storeName,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-
-                        Text(
-                            text = "₪%.2f".format(total),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        RadioButton(
-                            selected = selectedStore == storeName,
-                            onClick = { onStoreSelected(storeName) }
-                        )
-                    }
-                }
             }
         }
     }
@@ -1027,8 +636,12 @@ fun AddItemDialog(
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("בחר קטגוריה") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                        },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
                     )
                     ExposedDropdownMenu(
                         expanded = expanded,

@@ -5,10 +5,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.shoply.app.ui.screens.CompletedListsScreen
+import com.shoply.app.ui.screens.ListDetailsScreen
 import com.shoply.app.ui.screens.LoginScreen
 import com.shoply.app.ui.screens.MainScreen
 import com.shoply.app.ui.screens.MyShoppingListScreen
@@ -24,6 +27,7 @@ import com.shoply.app.viewmodel.ShoppingViewModel
  *
  * עודכן באבן דרך 4.3 לתמיכה ב-Responsive Design (העברת Activity למסכים)
  * עודכן באבן דרך 5.3 - הוספת מסך Register
+ * עודכן - הוספת ניווט למסך My Lists ולמסך List Details
  */
 @Composable
 fun NavGraph(activity: Activity) {
@@ -91,7 +95,25 @@ fun NavGraph(activity: Activity) {
         }
 
         composable(Screen.MyLists.route) {
-            MyShoppingListScreen(viewModel = shoppingViewModel)
+            MyShoppingListScreen(
+                navController = navController,
+                viewModel = shoppingViewModel
+            )
+        }
+
+        composable(
+            route = Screen.ListDetails.route,
+            arguments = listOf(
+                navArgument("listId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val listId = backStackEntry.arguments?.getString("listId") ?: ""
+
+            ListDetailsScreen(
+                listId = listId,
+                navController = navController,
+                viewModel = shoppingViewModel
+            )
         }
     }
 }
