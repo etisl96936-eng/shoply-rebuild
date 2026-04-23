@@ -2,20 +2,21 @@ package com.shoply.app.ui.navigation
 
 import android.app.Activity
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.shoply.app.ui.screens.CompletedListsScreen
 import com.shoply.app.ui.screens.LoginScreen
 import com.shoply.app.ui.screens.MainScreen
+import com.shoply.app.ui.screens.MyShoppingListScreen
 import com.shoply.app.ui.screens.ProfileScreen
 import com.shoply.app.ui.screens.RegisterScreen
+import com.shoply.app.ui.screens.StatsScreen
 import com.shoply.app.viewmodel.AuthViewModel
 import com.shoply.app.viewmodel.ShoppingViewModel
-import androidx.compose.runtime.getValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.shoply.app.ui.screens.StatsScreen
-import com.shoply.app.ui.screens.CompletedListsScreen
 
 /**
  * NavGraph - ניהול ניווט ראשי של האפליקציה
@@ -87,6 +88,10 @@ fun NavGraph(activity: Activity) {
 
         composable("completed_lists") {
             CompletedListsScreen(viewModel = shoppingViewModel)
+        }
+
+        composable(Screen.MyLists.route) {
+            MyShoppingListScreen(viewModel = shoppingViewModel)
         }
     }
 }

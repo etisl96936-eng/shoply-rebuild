@@ -94,24 +94,35 @@ fun MainScreen(
                 displayName = displayName,
                 isAdmin = isAdmin,
                 onHomeClick = { closeDrawerAnd { } },
+
                 onProfileClick = {
                     closeDrawerAnd { navController.navigate("profile") }
                 },
+
                 onStatsClick = {
                     closeDrawerAnd {
                         navController.navigate(Screen.Stats.route)
                     }
                 },
+
                 onCompletedListsClick = {
                     closeDrawerAnd {
                         navController.navigate("completed_lists")
                     }
                 },
+
+                onMyListsClick = {
+                    closeDrawerAnd {
+                        navController.navigate(Screen.MyLists.route)
+                    }
+                },
+
                 onSettingsClick = {
                     closeDrawerAnd {
                         // TODO: מסך הגדרות
                     }
                 },
+
                 onLogoutClick = {
                     closeDrawerAnd { showLogoutDialog = true }
                 }
@@ -574,9 +585,10 @@ private fun ShoplyDrawerContent(
     onProfileClick: () -> Unit,
     onStatsClick: () -> Unit,
     onCompletedListsClick: () -> Unit,
+    onMyListsClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onLogoutClick: () -> Unit,
-) {
+){
     ModalDrawerSheet {
         Column(
             modifier = Modifier.padding(ShoplySpacing.medium)
@@ -641,6 +653,12 @@ private fun ShoplyDrawerContent(
                 icon = Icons.Default.History,
                 label = "ארכיון רשימות",
                 onClick = onCompletedListsClick
+            )
+
+            DrawerItem(
+                icon = Icons.Default.List,
+                label = "הרשימות שלי",
+                onClick = onMyListsClick
             )
 
             DrawerItem(
