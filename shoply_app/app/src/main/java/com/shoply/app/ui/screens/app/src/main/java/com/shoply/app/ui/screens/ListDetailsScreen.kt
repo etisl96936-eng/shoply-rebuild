@@ -1,6 +1,7 @@
 package com.shoply.app.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,35 +12,23 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.Icon
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.Scaffold
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.shoply.app.data.ShoppingItem
+import com.shoply.app.data.ShoppingList
 import com.shoply.app.ui.state.UiState
 import com.shoply.app.viewmodel.ShoppingViewModel
 
@@ -51,7 +40,9 @@ fun ListDetailsScreen(
     viewModel: ShoppingViewModel
 ) {
     var newItemName by remember { mutableStateOf("") }
+    var newItemQuantity by remember { mutableStateOf("1") }
 
+    val listInfoState by viewModel.currentShoppingListInfoUiState.collectAsState()
     val itemsState by viewModel.shoppingListItemsUiState.collectAsState()
     val actionState by viewModel.shoppingListItemsActionState.collectAsState()
 
@@ -62,7 +53,13 @@ fun ListDetailsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("פרטי רשימה") },
+                title = {
+                    val title = when (val state = listInfoState) {
+                        is UiState.Success<ShoppingList> -> state.data.name
+                        else -> "פרטי רשימה"
+                    }
+                    Text(title)
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
@@ -96,7 +93,7 @@ fun ListDetailsScreen(
                         style = MaterialTheme.typography.titleLarge
                     )
                     Text(
-                        text = "כאן תוכלי לסמן, למחוק ולהוסיף פריטים לרשימה.",
+                        text = "כאן אפשר להוסיף פריטים ידנית, לשנות כמות, לסמן ולמחוק.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -111,11 +108,26 @@ fun ListDetailsScreen(
                 singleLine = true
             )
 
+            OutlinedTextField(
+                value = newItemQuantity,
+                onValueChange = { newValue ->
+                    newItemQuantity = newValue.filter { it.isDigit() }.ifBlank { "" }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("כמות") },
+                singleLine = true
+            )
+
             Button(
                 onClick = {
                     if (newItemName.isNotBlank()) {
-                        viewModel.addItemToCurrentShoppingList(listId, newItemName)
+                        viewModel.addItemToCurrentShoppingList(
+                            listId = listId,
+                            itemName = newItemName,
+                            quantity = if (newItemQuantity.isBlank()) "1" else newItemQuantity
+                        )
                         newItemName = ""
+                        newItemQuantity = "1"
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -124,7 +136,7 @@ fun ListDetailsScreen(
             }
 
             Text(
-                text = "בשלב הבא נוסיף הוספה ישירה מהקטלוג אל הרשימה הזו.",
+                text = "מהקטלוג אפשר להוסיף לרשימה הזאת דרך המסך הראשי לאחר בחירתה כרשימה פעילה.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -165,54 +177,82 @@ fun ListDetailsScreen(
                 null -> Unit
             }
 
-            when (val state = itemsState) {
-                UiState.Loading -> {
-                    CircularProgressIndicator()
-                }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
+                when (val state = itemsState) {
+                    UiState.Loading -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
 
-                is UiState.Error -> {
-                    Text(
-                        text = state.message,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
+                    is UiState.Error -> {
+                        Text(
+                            text = state.message,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
 
-                is UiState.Success -> {
-                    if (state.data.isEmpty()) {
-                        ElevatedCard(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.elevatedCardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            )
-                        ) {
-                            Text(
-                                text = "אין עדיין פריטים ברשימה הזו",
-                                modifier = Modifier.padding(20.dp),
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                        }
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(state.data, key = { it.id }) { item ->
-                                ShoppingListItemRow(
-                                    item = item,
-                                    onCheckedChange = {
-                                        viewModel.toggleItemCheckedInCurrentShoppingList(listId, item)
-                                    },
-                                    onDelete = {
-                                        viewModel.deleteItemFromCurrentShoppingList(listId, item.id)
-                                    }
+                    is UiState.Success -> {
+                        if (state.data.isEmpty()) {
+                            ElevatedCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.elevatedCardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
                                 )
+                            ) {
+                                Text(
+                                    text = "אין עדיין פריטים ברשימה הזו",
+                                    modifier = Modifier.padding(20.dp),
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(state.data, key = { it.id }) { item ->
+                                    ShoppingListItemRow(
+                                        item = item,
+                                        onCheckedChange = {
+                                            viewModel.toggleItemCheckedInCurrentShoppingList(listId, item)
+                                        },
+                                        onIncreaseQuantity = {
+                                            val current = item.quantity.toIntOrNull()?.coerceAtLeast(1) ?: 1
+                                            viewModel.updateItemQuantityInCurrentShoppingList(
+                                                listId = listId,
+                                                itemId = item.id,
+                                                quantity = (current + 1).toString()
+                                            )
+                                        },
+                                        onDecreaseQuantity = {
+                                            val current = item.quantity.toIntOrNull()?.coerceAtLeast(1) ?: 1
+                                            val next = (current - 1).coerceAtLeast(1)
+                                            viewModel.updateItemQuantityInCurrentShoppingList(
+                                                listId = listId,
+                                                itemId = item.id,
+                                                quantity = next.toString()
+                                            )
+                                        },
+                                        onDelete = {
+                                            viewModel.deleteItemFromCurrentShoppingList(listId, item.id)
+                                        }
+                                    )
+                                }
+
+                                item {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
                             }
                         }
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
@@ -221,53 +261,83 @@ fun ListDetailsScreen(
 private fun ShoppingListItemRow(
     item: ShoppingItem,
     onCheckedChange: () -> Unit,
+    onIncreaseQuantity: () -> Unit,
+    onDecreaseQuantity: () -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
-                Checkbox(
-                    checked = item.isChecked,
-                    onCheckedChange = { onCheckedChange() }
-                )
-
-                Column(
-                    modifier = Modifier.weight(1f)
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = item.title,
-                        style = MaterialTheme.typography.bodyLarge,
-                        textDecoration = if (item.isChecked) {
-                            TextDecoration.LineThrough
-                        } else {
-                            TextDecoration.None
-                        }
+                    Checkbox(
+                        checked = item.isChecked,
+                        onCheckedChange = { onCheckedChange() }
                     )
 
-                    Text(
-                        text = "כמות: ${item.quantity}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = item.title,
+                            style = MaterialTheme.typography.bodyLarge,
+                            textDecoration = if (item.isChecked) {
+                                TextDecoration.LineThrough
+                            } else {
+                                TextDecoration.None
+                            }
+                        )
+
+                        Text(
+                            text = item.category,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "מחיקת פריט"
                     )
                 }
             }
 
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "מחיקת פריט"
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "כמות:",
+                    style = MaterialTheme.typography.bodyMedium
                 )
+
+                OutlinedButton(onClick = onDecreaseQuantity) {
+                    Text("-")
+                }
+
+                Text(
+                    text = item.quantity,
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                OutlinedButton(onClick = onIncreaseQuantity) {
+                    Text("+")
+                }
             }
         }
     }

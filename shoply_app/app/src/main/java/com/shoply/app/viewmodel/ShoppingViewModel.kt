@@ -96,6 +96,11 @@ class ShoppingViewModel : ViewModel() {
 
     private val _currentShoppingListId = MutableStateFlow<String?>(null)
 
+    private val _currentShoppingListInfoUiState =
+        MutableStateFlow<UiState<ShoppingList>?>(null)
+    val currentShoppingListInfoUiState: StateFlow<UiState<ShoppingList>?> =
+        _currentShoppingListInfoUiState
+
     val shoppingListItemsUiState: StateFlow<UiState<List<ShoppingItem>>> =
         _currentShoppingListId
             .flatMapLatest { listId ->
@@ -248,9 +253,30 @@ class ShoppingViewModel : ViewModel() {
 
     fun setCurrentShoppingList(listId: String) {
         _currentShoppingListId.value = listId
+        loadCurrentShoppingListInfo(listId)
     }
 
-    fun addItemToCurrentShoppingList(listId: String, itemName: String) {
+    private fun loadCurrentShoppingListInfo(listId: String) {
+        val uid = currentUid
+        if (uid.isBlank()) {
+            _currentShoppingListInfoUiState.value = UiState.Error("לא נמצא משתמש מחובר")
+            return
+        }
+
+        viewModelScope.launch {
+            _currentShoppingListInfoUiState.value = UiState.Loading
+
+            val result = repository.getShoppingListById(uid, listId)
+            _currentShoppingListInfoUiState.value = result.fold(
+                onSuccess = { shoppingList -> UiState.Success(shoppingList) },
+                onFailure = { error ->
+                    UiState.Error(error.message ?: "שגיאה בטעינת פרטי הרשימה")
+                }
+            )
+        }
+    }
+
+    fun addItemToCurrentShoppingList(listId: String, itemName: String, quantity: String) {
         val uid = currentUid
         if (uid.isBlank()) {
             _shoppingListItemsActionState.value = UiState.Error("לא נמצא משתמש מחובר")
@@ -265,13 +291,51 @@ class ShoppingViewModel : ViewModel() {
         viewModelScope.launch {
             _shoppingListItemsActionState.value = UiState.Loading
 
-            val result = repository.addItemToShoppingList(uid, listId, itemName.trim())
+            val result = repository.addItemToShoppingList(
+                uid = uid,
+                listId = listId,
+                itemName = itemName.trim(),
+                quantity = quantity
+            )
+
             _shoppingListItemsActionState.value = result.fold(
                 onSuccess = { UiState.Success("הפריט נוסף לרשימה") },
                 onFailure = { error ->
                     UiState.Error(error.message ?: "שגיאה בהוספת פריט לרשימה")
                 }
             )
+
+            loadActiveShoppingLists()
+            loadCurrentShoppingListInfo(listId)
+        }
+    }
+
+    fun addCatalogItemToShoppingList(listId: String, item: ShoppingItem, quantity: String) {
+        val uid = currentUid
+        if (uid.isBlank()) {
+            _shoppingListItemsActionState.value = UiState.Error("לא נמצא משתמש מחובר")
+            return
+        }
+
+        viewModelScope.launch {
+            _shoppingListItemsActionState.value = UiState.Loading
+
+            val result = repository.addCatalogItemToShoppingList(
+                uid = uid,
+                listId = listId,
+                catalogItem = item,
+                quantity = quantity
+            )
+
+            _shoppingListItemsActionState.value = result.fold(
+                onSuccess = { UiState.Success("המוצר נוסף לרשימה") },
+                onFailure = { error ->
+                    UiState.Error(error.message ?: "שגיאה בהוספת מוצר מהקטלוג")
+                }
+            )
+
+            loadActiveShoppingLists()
+            loadCurrentShoppingListInfo(listId)
         }
     }
 
@@ -296,6 +360,36 @@ class ShoppingViewModel : ViewModel() {
                     UiState.Error(error.message ?: "שגיאה בעדכון הפריט")
                 }
             )
+
+            loadActiveShoppingLists()
+            loadCurrentShoppingListInfo(listId)
+        }
+    }
+
+    fun updateItemQuantityInCurrentShoppingList(listId: String, itemId: String, quantity: String) {
+        val uid = currentUid
+        if (uid.isBlank()) {
+            _shoppingListItemsActionState.value = UiState.Error("לא נמצא משתמש מחובר")
+            return
+        }
+
+        viewModelScope.launch {
+            val result = repository.updateItemQuantityInShoppingList(
+                uid = uid,
+                listId = listId,
+                itemId = itemId,
+                quantity = quantity
+            )
+
+            _shoppingListItemsActionState.value = result.fold(
+                onSuccess = { UiState.Success("הכמות עודכנה") },
+                onFailure = { error ->
+                    UiState.Error(error.message ?: "שגיאה בעדכון כמות")
+                }
+            )
+
+            loadActiveShoppingLists()
+            loadCurrentShoppingListInfo(listId)
         }
     }
 
@@ -314,6 +408,9 @@ class ShoppingViewModel : ViewModel() {
                     UiState.Error(error.message ?: "שגיאה במחיקת פריט")
                 }
             )
+
+            loadActiveShoppingLists()
+            loadCurrentShoppingListInfo(listId)
         }
     }
 

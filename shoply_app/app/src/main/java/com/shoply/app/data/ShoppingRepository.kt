@@ -23,6 +23,11 @@ class ShoppingRepository {
             .document(listId)
             .collection("items")
 
+    private fun normalizeQuantity(quantity: String): String {
+        val parsed = quantity.trim().toIntOrNull()?.coerceAtLeast(1) ?: 1
+        return parsed.toString()
+    }
+
     private suspend fun updateShoppingListTimestamp(uid: String, listId: String) {
         shoppingListsCollection(uid)
             .document(listId)
@@ -120,6 +125,19 @@ class ShoppingRepository {
         }.sortedByDescending { it.updatedAt }
     }
 
+    suspend fun getShoppingListById(
+        uid: String,
+        listId: String
+    ): Result<ShoppingList> = runCatching {
+        val snapshot = shoppingListsCollection(uid)
+            .document(listId)
+            .get()
+            .await()
+
+        snapshot.toObject(ShoppingList::class.java)?.copy(id = snapshot.id)
+            ?: throw IllegalStateException("הרשימה לא נמצאה")
+    }
+
     suspend fun updateShoppingListName(
         uid: String,
         listId: String,
@@ -180,14 +198,15 @@ class ShoppingRepository {
     suspend fun addItemToShoppingList(
         uid: String,
         listId: String,
-        itemName: String
+        itemName: String,
+        quantity: String
     ): Result<Unit> = runCatching {
         val newDoc = shoppingListItemsCollection(uid, listId).document()
 
         val item = ShoppingItem(
             id = newDoc.id,
-            title = itemName,
-            quantity = "1",
+            title = itemName.trim(),
+            quantity = normalizeQuantity(quantity),
             category = "כללי",
             description = "",
             isChecked = false,
@@ -195,6 +214,48 @@ class ShoppingRepository {
         )
 
         newDoc.set(item).await()
+        updateShoppingListTimestamp(uid, listId)
+    }
+
+    suspend fun addCatalogItemToShoppingList(
+        uid: String,
+        listId: String,
+        catalogItem: ShoppingItem,
+        quantity: String
+    ): Result<Unit> = runCatching {
+        val docId = if (catalogItem.id.isNotBlank()) {
+            catalogItem.id
+        } else {
+            shoppingListItemsCollection(uid, listId).document().id
+        }
+
+        val docRef = shoppingListItemsCollection(uid, listId).document(docId)
+        val snapshot = docRef.get().await()
+
+        if (snapshot.exists()) {
+            val existingItem = snapshot.toObject(ShoppingItem::class.java)
+            val currentQty = existingItem?.quantity?.toIntOrNull()?.coerceAtLeast(1) ?: 1
+            val addedQty = quantity.trim().toIntOrNull()?.coerceAtLeast(1) ?: 1
+            val newQty = (currentQty + addedQty).toString()
+
+            docRef.update(
+                mapOf(
+                    "quantity" to newQty,
+                    "isChecked" to false
+                )
+            ).await()
+        } else {
+            val itemToSave = catalogItem.copy(
+                id = docId,
+                quantity = normalizeQuantity(quantity),
+                isChecked = false,
+                isSelected = false,
+                isPurchased = false,
+                timestamp = System.currentTimeMillis()
+            )
+            docRef.set(itemToSave).await()
+        }
+
         updateShoppingListTimestamp(uid, listId)
     }
 
@@ -206,12 +267,21 @@ class ShoppingRepository {
     ): Result<Unit> = runCatching {
         shoppingListItemsCollection(uid, listId)
             .document(itemId)
-            .update(
-                mapOf(
-                    "isChecked" to isChecked,
-                    "updatedAt" to System.currentTimeMillis()
-                )
-            )
+            .update("isChecked", isChecked)
+            .await()
+
+        updateShoppingListTimestamp(uid, listId)
+    }
+
+    suspend fun updateItemQuantityInShoppingList(
+        uid: String,
+        listId: String,
+        itemId: String,
+        quantity: String
+    ): Result<Unit> = runCatching {
+        shoppingListItemsCollection(uid, listId)
+            .document(itemId)
+            .update("quantity", normalizeQuantity(quantity))
             .await()
 
         updateShoppingListTimestamp(uid, listId)

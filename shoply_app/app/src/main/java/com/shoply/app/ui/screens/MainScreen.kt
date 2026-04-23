@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +48,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.shoply.app.data.ProductUiModel
 import com.shoply.app.data.ShoppingItem
+import com.shoply.app.data.ShoppingList
 import com.shoply.app.data.StorePrice
 import com.shoply.app.ui.components.ErrorView
 import com.shoply.app.ui.components.LoadingView
@@ -61,6 +64,7 @@ import com.shoply.app.ui.theme.rememberShoplyWindowSize
 import com.shoply.app.viewmodel.AuthViewModel
 import com.shoply.app.viewmodel.ShoppingViewModel
 import kotlinx.coroutines.launch
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
@@ -72,6 +76,8 @@ fun MainScreen(
     activity: Activity
 ) {
     val catalogState by viewModel.catalogUiState.collectAsStateWithLifecycle()
+    val shoppingListsState by viewModel.shoppingListsUiState.collectAsStateWithLifecycle()
+    val activeListItemsState by viewModel.shoppingListItemsUiState.collectAsStateWithLifecycle()
 
     val windowSize = rememberShoplyWindowSize(activity)
     val gridColumns = ShoplyResponsive.gridColumns(windowSize)
@@ -85,11 +91,30 @@ fun MainScreen(
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
-    var showCatalogHintDialog by remember { mutableStateOf(false) }
+
+    var activeListId by remember { mutableStateOf<String?>(null) }
+    var activeListName by remember { mutableStateOf("") }
+
+    var showChooseActiveListDialog by remember { mutableStateOf(false) }
+    var catalogItemToAdd by remember { mutableStateOf<ShoppingItem?>(null) }
+    var showAddToListDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        viewModel.loadActiveShoppingLists()
+    }
+
+    LaunchedEffect(activeListId) {
+        activeListId?.let { viewModel.setCurrentShoppingList(it) }
+    }
 
     val closeDrawerAnd: (action: () -> Unit) -> Unit = { action ->
         scope.launch { drawerState.close() }
         action()
+    }
+
+    val activeListItemIds = when (val state = activeListItemsState) {
+        is UiState.Success -> state.data.map { it.id }.toSet()
+        else -> emptySet()
     }
 
     ModalNavigationDrawer(
@@ -267,11 +292,11 @@ fun MainScreen(
 
                         Spacer(modifier = Modifier.height(ShoplySpacing.small))
 
-                        Text(
-                            text = "כאן מוצג הקטלוג בלבד. הוספת מוצרים לרשימה מתוך הקטלוג תחובר בשלב הבא.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = ShoplySpacing.medium)
+                        ActiveListHeader(
+                            shoppingListsState = shoppingListsState,
+                            activeListName = activeListName,
+                            onChooseListClick = { showChooseActiveListDialog = true },
+                            onGoToMyListsClick = { navController.navigate(Screen.MyLists.route) }
                         )
 
                         Spacer(modifier = Modifier.height(ShoplySpacing.small))
@@ -299,10 +324,17 @@ fun MainScreen(
                                 ) {
                                     items(filteredItems, key = { it.id }) { item ->
                                         ProductPriceCard(
-                                            product = item.toProductUiModel(isInMyList = false),
+                                            product = item.toProductUiModel(
+                                                isInMyList = activeListItemIds.contains(item.id)
+                                            ),
                                             isAdmin = isAdmin,
                                             onToggleInList = {
-                                                showCatalogHintDialog = true
+                                                if (activeListId == null) {
+                                                    showChooseActiveListDialog = true
+                                                } else {
+                                                    catalogItemToAdd = item
+                                                    showAddToListDialog = true
+                                                }
                                             },
                                             onDelete = { itemToDelete = item }
                                         )
@@ -318,10 +350,17 @@ fun MainScreen(
                                 ) {
                                     items(filteredItems, key = { it.id }) { item ->
                                         ProductPriceCard(
-                                            product = item.toProductUiModel(isInMyList = false),
+                                            product = item.toProductUiModel(
+                                                isInMyList = activeListItemIds.contains(item.id)
+                                            ),
                                             isAdmin = isAdmin,
                                             onToggleInList = {
-                                                showCatalogHintDialog = true
+                                                if (activeListId == null) {
+                                                    showChooseActiveListDialog = true
+                                                } else {
+                                                    catalogItemToAdd = item
+                                                    showAddToListDialog = true
+                                                }
                                             },
                                             onDelete = { itemToDelete = item }
                                         )
@@ -343,18 +382,39 @@ fun MainScreen(
                 )
             }
 
-            if (showCatalogHintDialog) {
-                ShoplyAlertDialog(
-                    title = "הוספה לרשימה",
-                    message = "בשלב הבא נחבר הוספת מוצרים מהקטלוג לרשימה פעילה. כרגע ניהול הרשימות מתבצע ממסך 'הרשימות שלי'.",
-                    confirmText = "מעולה",
-                    dismissText = "לרשימות שלי",
-                    onConfirm = {
-                        showCatalogHintDialog = false
+            if (showChooseActiveListDialog) {
+                ChooseActiveListDialog(
+                    shoppingListsState = shoppingListsState,
+                    currentActiveListId = activeListId,
+                    onDismiss = { showChooseActiveListDialog = false },
+                    onSelectList = { list ->
+                        activeListId = list.id
+                        activeListName = list.name
+                        showChooseActiveListDialog = false
                     },
-                    onDismiss = {
-                        showCatalogHintDialog = false
+                    onGoToMyLists = {
+                        showChooseActiveListDialog = false
                         navController.navigate(Screen.MyLists.route)
+                    }
+                )
+            }
+
+            if (showAddToListDialog && catalogItemToAdd != null && activeListId != null) {
+                AddCatalogItemToListDialog(
+                    itemTitle = catalogItemToAdd!!.title,
+                    listName = activeListName,
+                    onDismiss = {
+                        showAddToListDialog = false
+                        catalogItemToAdd = null
+                    },
+                    onConfirm = { quantity ->
+                        viewModel.addCatalogItemToShoppingList(
+                            listId = activeListId!!,
+                            item = catalogItemToAdd!!,
+                            quantity = quantity
+                        )
+                        showAddToListDialog = false
+                        catalogItemToAdd = null
                     }
                 )
             }
@@ -393,6 +453,184 @@ fun MainScreen(
             }
         }
     }
+}
+
+@Composable
+private fun ActiveListHeader(
+    shoppingListsState: UiState<List<ShoppingList>>,
+    activeListName: String,
+    onChooseListClick: () -> Unit,
+    onGoToMyListsClick: () -> Unit
+) {
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = ShoplySpacing.medium),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            when (shoppingListsState) {
+                UiState.Loading -> {
+                    Text("טוען רשימות...")
+                }
+
+                is UiState.Error -> {
+                    Text(
+                        text = "לא ניתן לטעון את הרשימות כרגע",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+
+                is UiState.Success -> {
+                    if (shoppingListsState.data.isEmpty()) {
+                        Text(
+                            text = "אין עדיין רשימות פעילות. צרי רשימה כדי להוסיף אליה מוצרים מהקטלוג.",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(onClick = onGoToMyListsClick) {
+                                Text("לרשימות שלי")
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = if (activeListName.isBlank()) {
+                                "לא נבחרה עדיין רשימה פעילה"
+                            } else {
+                                "רשימה פעילה: $activeListName"
+                            },
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        Text(
+                            text = "הוספה מהקטלוג תתבצע לרשימה הפעילה.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(onClick = onChooseListClick) {
+                                Text(if (activeListName.isBlank()) "בחרי רשימה" else "החליפי רשימה")
+                            }
+
+                            OutlinedButton(onClick = onGoToMyListsClick) {
+                                Text("ניהול רשימות")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChooseActiveListDialog(
+    shoppingListsState: UiState<List<ShoppingList>>,
+    currentActiveListId: String?,
+    onDismiss: () -> Unit,
+    onSelectList: (ShoppingList) -> Unit,
+    onGoToMyLists: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("בחירת רשימה פעילה") },
+        text = {
+            when (shoppingListsState) {
+                UiState.Loading -> {
+                    CircularProgressIndicator()
+                }
+
+                is UiState.Error -> {
+                    Text(shoppingListsState.message)
+                }
+
+                is UiState.Success -> {
+                    if (shoppingListsState.data.isEmpty()) {
+                        Text("אין עדיין רשימות פעילות")
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            shoppingListsState.data.forEach { list ->
+                                OutlinedButton(
+                                    onClick = { onSelectList(list) },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = if (currentActiveListId == list.id) {
+                                            "✓ ${list.name}"
+                                        } else {
+                                            list.name
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("סגור")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onGoToMyLists) {
+                Text("לרשימות שלי")
+            }
+        }
+    )
+}
+
+@Composable
+private fun AddCatalogItemToListDialog(
+    itemTitle: String,
+    listName: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var quantity by remember { mutableStateOf("1") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("הוספה לרשימה") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("מוצר: $itemTitle")
+                Text("רשימה: $listName")
+
+                OutlinedTextField(
+                    value = quantity,
+                    onValueChange = { newValue ->
+                        quantity = newValue.filter { it.isDigit() }.ifBlank { "" }
+                    },
+                    label = { Text("כמות") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(if (quantity.isBlank()) "1" else quantity)
+                }
+            ) {
+                Text("הוסף")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("ביטול")
+            }
+        }
+    )
 }
 
 @Composable
