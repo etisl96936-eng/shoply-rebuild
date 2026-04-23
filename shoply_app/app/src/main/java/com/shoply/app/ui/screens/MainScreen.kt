@@ -89,6 +89,8 @@ fun MainScreen(
     var itemToDelete by remember { mutableStateOf<ShoppingItem?>(null) }
     var showLogoutDialog by remember { mutableStateOf(false) }
 
+    var isActiveListHeaderExpanded by remember { mutableStateOf(true) }
+
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
 
@@ -295,6 +297,7 @@ fun MainScreen(
                         ActiveListHeader(
                             shoppingListsState = shoppingListsState,
                             activeListName = activeListName,
+                            isExpanded = isActiveListHeaderExpanded || activeListName.isBlank(),
                             onChooseListClick = { showChooseActiveListDialog = true },
                             onGoToMyListsClick = { navController.navigate(Screen.MyLists.route) }
                         )
@@ -390,6 +393,7 @@ fun MainScreen(
                     onSelectList = { list ->
                         activeListId = list.id
                         activeListName = list.name
+                        isActiveListHeaderExpanded = false
                         showChooseActiveListDialog = false
                     },
                     onGoToMyLists = {
@@ -454,58 +458,102 @@ fun MainScreen(
         }
     }
 }
-
 @Composable
 private fun ActiveListHeader(
     shoppingListsState: UiState<List<ShoppingList>>,
     activeListName: String,
+    isExpanded: Boolean,
     onChooseListClick: () -> Unit,
     onGoToMyListsClick: () -> Unit
 ) {
-    ElevatedCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = ShoplySpacing.medium),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            when (shoppingListsState) {
-                UiState.Loading -> {
-                    Text("טוען רשימות...")
-                }
+    when (shoppingListsState) {
+        UiState.Loading -> {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = ShoplySpacing.medium),
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                Text(
+                    text = "טוען רשימות...",
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
 
-                is UiState.Error -> {
-                    Text(
-                        text = "לא ניתן לטעון את הרשימות כרגע",
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
+        is UiState.Error -> {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = ShoplySpacing.medium),
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.errorContainer
+            ) {
+                Text(
+                    text = "לא ניתן לטעון רשימות",
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        }
 
-                is UiState.Success -> {
-                    if (shoppingListsState.data.isEmpty()) {
+        is UiState.Success -> {
+            if (shoppingListsState.data.isEmpty()) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = ShoplySpacing.medium),
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Text(
-                            text = "אין עדיין רשימות פעילות. צרי רשימה כדי להוסיף אליה מוצרים מהקטלוג.",
-                            style = MaterialTheme.typography.bodyMedium
+                            text = "לא נבחרה עדיין רשימה פעילה",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+
+                        Text(
+                            text = "הוספה מהקטלוג תתבצע לרשימה הפעילה.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = onGoToMyListsClick) {
-                                Text("לרשימות שלי")
+                            Button(onClick = onChooseListClick) {
+                                Text("בחרי רשימה")
+                            }
+
+                            OutlinedButton(onClick = onGoToMyListsClick) {
+                                Text("ניהול רשימות")
                             }
                         }
-                    } else {
+                    }
+                }
+            } else if (isExpanded) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = ShoplySpacing.medium),
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Text(
                             text = if (activeListName.isBlank()) {
                                 "לא נבחרה עדיין רשימה פעילה"
                             } else {
                                 "רשימה פעילה: $activeListName"
                             },
-                            style = MaterialTheme.typography.titleMedium
+                            style = MaterialTheme.typography.titleSmall
                         )
 
                         Text(
@@ -525,11 +573,43 @@ private fun ActiveListHeader(
                         }
                     }
                 }
+            } else {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = ShoplySpacing.medium),
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "רשימה פעילה:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        AssistChip(
+                            onClick = onChooseListClick,
+                            label = { Text(activeListName) }
+                        )
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        TextButton(onClick = onChooseListClick) {
+                            Text("החלפה")
+                        }
+                    }
+                }
             }
         }
     }
 }
-
 @Composable
 private fun ChooseActiveListDialog(
     shoppingListsState: UiState<List<ShoppingList>>,
