@@ -308,7 +308,7 @@ fun MainScreen(
                             Box(modifier = Modifier.fillMaxSize()) {
                                 Text(
                                     text = if (baseItems.isEmpty()) {
-                                        "אין פריטים בקטלוג. לחצי על ה־+ להוספה"
+                                        "אין פריטים בקטלוג. לחץ על ה־+ להוספה"
                                     } else {
                                         "לא נמצאו פריטים התואמים לחיפוש"
                                     },

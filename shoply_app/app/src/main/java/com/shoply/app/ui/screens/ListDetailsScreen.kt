@@ -18,6 +18,7 @@ import com.shoply.app.data.ShoppingList
 import com.shoply.app.data.StorePrice
 import com.shoply.app.ui.state.UiState
 import com.shoply.app.viewmodel.ShoppingViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,6 +27,8 @@ fun ListDetailsScreen(
     navController: NavHostController,
     viewModel: ShoppingViewModel
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     var newItemName by remember { mutableStateOf("") }
     var newItemQuantity by remember { mutableStateOf("1") }
     var showSelectStoreDialog by remember { mutableStateOf(false) }
@@ -120,7 +123,8 @@ fun ListDetailsScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -162,7 +166,7 @@ fun ListDetailsScreen(
                             onClick = {
                                 viewModel.selectStoreForShoppingList(
                                     listId = listId,
-                                    storeName = store
+                                    storeName = if (selectedStore == store) "" else store
                                 )
                             }
                         ) {
@@ -251,7 +255,9 @@ fun ListDetailsScreen(
 
                                     if (isLastUncheckedItem) {
                                         if (selectedStore.isNullOrBlank()) {
-                                            showSelectStoreDialog = true
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar("יש לבחור את הסופר בו התבצעה הקנייה")
+                                            }
                                             return@ShoppingListItemRow
                                         }
 

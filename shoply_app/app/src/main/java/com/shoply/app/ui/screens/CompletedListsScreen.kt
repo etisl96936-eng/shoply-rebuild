@@ -382,7 +382,7 @@ private fun CompletedListCard(
             )
 
             Text(
-                text = "לחצי לצפייה בפרטי הרשימה",
+                text = "לחץ לצפייה בפרטי הרשימה",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
