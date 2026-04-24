@@ -347,9 +347,16 @@ private fun CompletedListCard(
             ) {
                 Column {
                     Text(
-                        text = completedList.selectedStore,
+                        text = completedList.name.ifBlank { "רשימה ללא שם" },
                         style = MaterialTheme.typography.titleMedium
                     )
+
+                    Text(
+                        text = completedList.selectedStore,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
                     Text(
                         text = formatCompletedDate(completedList.completedAt),
                         style = MaterialTheme.typography.bodySmall,

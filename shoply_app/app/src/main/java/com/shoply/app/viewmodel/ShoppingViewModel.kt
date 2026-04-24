@@ -509,6 +509,7 @@ class ShoppingViewModel : ViewModel() {
     }
 
     fun completeShoppingList(
+        listName: String,
         items: List<ShoppingItem>,
         selectedStore: String,
         totalAmount: Double
@@ -519,6 +520,7 @@ class ShoppingViewModel : ViewModel() {
         viewModelScope.launch {
             repository.completeShoppingList(
                 uid = uid,
+                listName = listName,
                 items = items,
                 selectedStore = selectedStore,
                 totalAmount = totalAmount

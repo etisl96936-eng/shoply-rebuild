@@ -387,10 +387,11 @@ class ShoppingRepository {
 
     suspend fun completeShoppingList(
         uid: String,
+        listName: String,
         items: List<ShoppingItem>,
         selectedStore: String,
         totalAmount: Double
-    ) {
+    ){
         if (uid.isBlank() || items.isEmpty() || selectedStore.isBlank()) return
 
         val completedListRef = firestore.collection("users")
@@ -400,10 +401,11 @@ class ShoppingRepository {
 
         val completedData = hashMapOf(
             "id" to completedListRef.id,
+            "name" to listName,
             "completedAt" to System.currentTimeMillis(),
             "selectedStore" to selectedStore,
             "items" to items,
-            "totalAmount" to totalAmount
+            "totalAmount" to totalAmount,
         )
 
         completedListRef.set(completedData).await()

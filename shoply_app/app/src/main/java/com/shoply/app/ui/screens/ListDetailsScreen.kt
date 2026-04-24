@@ -32,6 +32,8 @@ fun ListDetailsScreen(
 
     val listInfoState by viewModel.currentShoppingListInfoUiState.collectAsState()
     val itemsState by viewModel.shoppingListItemsUiState.collectAsState()
+    var showFinishDialog by remember { mutableStateOf(false) }
+    var lastItemToComplete by remember { mutableStateOf<ShoppingItem?>(null) }
 
     LaunchedEffect(listId) {
         viewModel.setCurrentShoppingList(listId)
@@ -54,20 +56,53 @@ fun ListDetailsScreen(
 
         total
     }
+    val selectedStore = (listInfoState as? UiState.Success)?.data?.selectedStore
 
-    if (showSelectStoreDialog) {
+    if (showFinishDialog && lastItemToComplete != null) {
         AlertDialog(
-            onDismissRequest = { showSelectStoreDialog = false },
-            title = { Text("סיום רשימה") },
-            text = { Text("יש לבחור את הסופר בו בוצעה הרכישה") },
+            onDismissRequest = { showFinishDialog = false },
+            title = { Text("סיום קנייה") },
+            text = { Text("האם ברצונך לסיים את הקנייה ולהעביר לארכיון?") },
             confirmButton = {
-                TextButton(onClick = { showSelectStoreDialog = false }) {
-                    Text("בחר סופר למעלה")
+                TextButton(
+                    onClick = {
+                        showFinishDialog = false
+
+                        val item = lastItemToComplete!!
+
+                        viewModel.toggleItemCheckedInCurrentShoppingList(listId, item)
+
+                        val total = totals[selectedStore] ?: 0.0
+                        val listName = (listInfoState as? UiState.Success)?.data?.name ?: ""
+                        viewModel.completeShoppingList(
+                            listName = listName,
+
+                            items = items.map {
+                                if (it.id == item.id) it.copy(isChecked = true) else it
+                            },
+                            selectedStore = selectedStore!!,
+                            totalAmount = total
+                        )
+
+                        viewModel.archiveShoppingList(listId)
+
+                        navController.popBackStack()
+                    }
+                ) {
+                    Text("כן")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showFinishDialog = false
+                    }
+                ) {
+                    Text("לא")
                 }
             }
         )
     }
-    val selectedStore = (listInfoState as? UiState.Success)?.data?.selectedStore
 
     Scaffold(
         topBar = {
@@ -206,8 +241,15 @@ fun ListDetailsScreen(
                                     val isLastUncheckedItem =
                                         uncheckedItems.size == 1 && uncheckedItems.first().id == item.id
 
-                                    if (isLastUncheckedItem && selectedStore.isNullOrBlank()) {
-                                        showSelectStoreDialog = true
+                                    if (isLastUncheckedItem) {
+                                        if (selectedStore.isNullOrBlank()) {
+                                            showSelectStoreDialog = true
+                                            return@ShoppingListItemRow
+                                        }
+
+                                        // לא מסמנים עדיין!
+                                        lastItemToComplete = item
+                                        showFinishDialog = true
                                         return@ShoppingListItemRow
                                     }
 
