@@ -1,5 +1,4 @@
 package com.shoply.app.data.repository
-
 import com.google.firebase.firestore.FirebaseFirestore
 import com.shoply.app.data.CompletedShoppingList
 import com.shoply.app.data.ShoppingItem
@@ -8,6 +7,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import com.shoply.app.data.StorePrice
 
 class ShoppingRepository {
     private val firestore = FirebaseFirestore.getInstance()
@@ -232,6 +232,16 @@ class ShoppingRepository {
         val docRef = shoppingListItemsCollection(uid, listId).document(docId)
         val snapshot = docRef.get().await()
 
+        val pricesToSave = if (catalogItem.storePrices.isNotEmpty()) {
+            catalogItem.storePrices
+        } else {
+            listOf(
+                StorePrice("שופרסל", 7.2),
+                StorePrice("רמי לוי", 6.9),
+                StorePrice("ויקטורי", 7.5)
+            )
+        }
+
         if (snapshot.exists()) {
             val existingItem = snapshot.toObject(ShoppingItem::class.java)
             val currentQty = existingItem?.quantity?.toIntOrNull()?.coerceAtLeast(1) ?: 1
@@ -241,7 +251,8 @@ class ShoppingRepository {
             docRef.update(
                 mapOf(
                     "quantity" to newQty,
-                    "isChecked" to false
+                    "isChecked" to false,
+                    "storePrices" to pricesToSave
                 )
             ).await()
         } else {
@@ -251,8 +262,10 @@ class ShoppingRepository {
                 isChecked = false,
                 isSelected = false,
                 isPurchased = false,
-                timestamp = System.currentTimeMillis()
+                timestamp = System.currentTimeMillis(),
+                storePrices = pricesToSave
             )
+
             docRef.set(itemToSave).await()
         }
 

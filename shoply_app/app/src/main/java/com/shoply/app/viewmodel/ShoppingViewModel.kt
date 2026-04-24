@@ -1,5 +1,4 @@
 package com.shoply.app.viewmodel
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
@@ -17,6 +16,8 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.shoply.app.data.StorePrice
+
 
 class ShoppingViewModel : ViewModel() {
     private val repository = ShoppingRepository()
@@ -454,7 +455,13 @@ class ShoppingViewModel : ViewModel() {
                 quantity = quantity,
                 description = description,
                 category = category,
-                timestamp = System.currentTimeMillis()
+                timestamp = System.currentTimeMillis(),
+
+                storePrices = listOf(
+                    StorePrice("שופרסל", 7.2),
+                    StorePrice("רמי לוי", 6.9),
+                    StorePrice("ויקטורי", 7.5)
+                )
             )
             repository.addItem(newItem)
         }
@@ -525,6 +532,23 @@ class ShoppingViewModel : ViewModel() {
 
         viewModelScope.launch {
             repository.deleteCompletedList(uid, listId)
+        }
+    }
+
+    fun calculateTotalPerStore(
+        items: List<ShoppingItem>,
+        stores: List<String>
+    ): Map<String, Double> {
+        return stores.associateWith { store ->
+            items.sumOf { item ->
+                val quantity = item.quantity.toDoubleOrNull() ?: 1.0
+
+                val priceForStore = item.storePrices
+                    .find { it.storeName == store }
+                    ?.price ?: 0.0
+
+                priceForStore * quantity
+            }
         }
     }
 }

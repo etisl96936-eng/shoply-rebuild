@@ -1,6 +1,7 @@
 package com.shoply.app.data
-
 import com.google.firebase.firestore.DocumentId
+
+val storePrices: List<StorePrice> = emptyList()
 
 data class ShoppingItem(
     @DocumentId
@@ -11,10 +12,13 @@ data class ShoppingItem(
     val imageRes: Int = 0,
     val videoUrl: String = "",
     val quantity: String = "1",
-    @field:JvmField // עוזר ל-Firebase לזהות נכון שדות בוליאניים שמתחילים ב-is
+    @field:JvmField
     val isChecked: Boolean = false,
     val addedBy: String = "",
     val timestamp: Long = System.currentTimeMillis(),
     val isSelected: Boolean = false,
-    val isPurchased: Boolean = false
+    val isPurchased: Boolean = false,
+
+    // 👇 זה החדש
+    val storePrices: List<StorePrice> = emptyList()
 )
