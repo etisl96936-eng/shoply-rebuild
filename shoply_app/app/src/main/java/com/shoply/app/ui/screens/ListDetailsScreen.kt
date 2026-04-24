@@ -28,6 +28,7 @@ fun ListDetailsScreen(
 ) {
     var newItemName by remember { mutableStateOf("") }
     var newItemQuantity by remember { mutableStateOf("1") }
+    var showSelectStoreDialog by remember { mutableStateOf(false) }
 
     val listInfoState by viewModel.currentShoppingListInfoUiState.collectAsState()
     val itemsState by viewModel.shoppingListItemsUiState.collectAsState()
@@ -53,6 +54,20 @@ fun ListDetailsScreen(
 
         total
     }
+
+    if (showSelectStoreDialog) {
+        AlertDialog(
+            onDismissRequest = { showSelectStoreDialog = false },
+            title = { Text("סיום רשימה") },
+            text = { Text("יש לבחור את הסופר בו בוצעה הרכישה") },
+            confirmButton = {
+                TextButton(onClick = { showSelectStoreDialog = false }) {
+                    Text("בחר סופר למעלה")
+                }
+            }
+        )
+    }
+    val selectedStore = (listInfoState as? UiState.Success)?.data?.selectedStore
 
     Scaffold(
         topBar = {
@@ -92,13 +107,36 @@ fun ListDetailsScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     stores.forEach { store ->
-                        Card(modifier = Modifier.weight(1f)) {
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (selectedStore == store) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                }
+                            ),
+                            onClick = {
+                                viewModel.selectStoreForShoppingList(
+                                    listId = listId,
+                                    storeName = store
+                                )
+                            }
+                        ) {
                             Column(
                                 modifier = Modifier.padding(8.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(store)
                                 Text("₪${"%.2f".format(totals[store] ?: 0.0)}")
+
+                                if (selectedStore == store) {
+                                    Text(
+                                        text = "נבחר",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
                         }
                     }
@@ -164,6 +202,15 @@ fun ListDetailsScreen(
                             ShoppingListItemRow(
                                 item = item,
                                 onCheckedChange = {
+                                    val uncheckedItems = items.filter { !it.isChecked }
+                                    val isLastUncheckedItem =
+                                        uncheckedItems.size == 1 && uncheckedItems.first().id == item.id
+
+                                    if (isLastUncheckedItem && selectedStore.isNullOrBlank()) {
+                                        showSelectStoreDialog = true
+                                        return@ShoppingListItemRow
+                                    }
+
                                     viewModel.toggleItemCheckedInCurrentShoppingList(listId, item)
                                 },
                                 onDelete = {

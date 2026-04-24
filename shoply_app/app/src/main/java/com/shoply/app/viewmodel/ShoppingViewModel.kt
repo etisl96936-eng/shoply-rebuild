@@ -551,4 +551,20 @@ class ShoppingViewModel : ViewModel() {
             }
         }
     }
+
+    fun selectStoreForShoppingList(listId: String, storeName: String) {
+        val uid = currentUid
+        if (uid.isBlank()) return
+
+        viewModelScope.launch {
+            repository.updateShoppingListSelectedStore(
+                uid = uid,
+                listId = listId,
+                storeName = storeName
+            )
+
+            loadCurrentShoppingListInfo(listId)
+            loadActiveShoppingLists()
+        }
+    }
 }

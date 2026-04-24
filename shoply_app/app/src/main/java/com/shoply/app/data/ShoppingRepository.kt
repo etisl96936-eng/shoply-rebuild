@@ -425,4 +425,20 @@ class ShoppingRepository {
             .delete()
             .await()
     }
+
+    suspend fun updateShoppingListSelectedStore(
+        uid: String,
+        listId: String,
+        storeName: String
+    ): Result<Unit> = runCatching {
+        shoppingListsCollection(uid)
+            .document(listId)
+            .update(
+                mapOf(
+                    "selectedStore" to storeName,
+                    "updatedAt" to System.currentTimeMillis()
+                )
+            )
+            .await()
+    }
 }
