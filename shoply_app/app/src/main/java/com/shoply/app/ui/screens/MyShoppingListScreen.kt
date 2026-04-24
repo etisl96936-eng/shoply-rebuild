@@ -339,7 +339,7 @@ private fun EmptyListsState(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Button(onClick = onCreateClick) {
-                Text("צור רשימה ראשונה")
+                Text("צור רשימה חדשה")
             }
         }
     }
