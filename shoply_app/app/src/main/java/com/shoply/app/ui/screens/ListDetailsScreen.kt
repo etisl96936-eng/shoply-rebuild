@@ -168,7 +168,24 @@ fun ListDetailsScreen(
                                 },
                                 onDelete = {
                                     viewModel.deleteItemFromCurrentShoppingList(listId, item.id)
-                                }
+                                },
+                                        onIncreaseQuantity = {
+                                    val current = item.quantity.toIntOrNull()?.coerceAtLeast(1) ?: 1
+                                    viewModel.updateItemQuantityInCurrentShoppingList(
+                                        listId = listId,
+                                        itemId = item.id,
+                                        quantity = (current + 1).toString()
+                                    )
+                                },
+                                onDecreaseQuantity = {
+                                    val current = item.quantity.toIntOrNull()?.coerceAtLeast(1) ?: 1
+                                    val next = (current - 1).coerceAtLeast(1)
+                                    viewModel.updateItemQuantityInCurrentShoppingList(
+                                        listId = listId,
+                                        itemId = item.id,
+                                        quantity = next.toString()
+                                    )
+                                },
                             )
                         }
                     }
@@ -182,7 +199,9 @@ fun ListDetailsScreen(
 private fun ShoppingListItemRow(
     item: ShoppingItem,
     onCheckedChange: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onIncreaseQuantity: () -> Unit,
+    onDecreaseQuantity: () -> Unit,
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -195,6 +214,7 @@ private fun ShoppingListItemRow(
             )
 
             Column(modifier = Modifier.weight(1f)) {
+
                 Text(
                     text = item.title,
                     textDecoration = if (item.isChecked) {
@@ -203,7 +223,23 @@ private fun ShoppingListItemRow(
                         TextDecoration.None
                     }
                 )
+
                 Text(item.category)
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("כמות: ${item.quantity}")
+
+                    OutlinedButton(onClick = onDecreaseQuantity) {
+                        Text("-")
+                    }
+
+                    OutlinedButton(onClick = onIncreaseQuantity) {
+                        Text("+")
+                    }
+                }
             }
 
             IconButton(onClick = onDelete) {
