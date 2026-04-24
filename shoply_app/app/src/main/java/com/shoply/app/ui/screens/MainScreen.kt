@@ -860,7 +860,7 @@ private fun ShoppingItem.toProductUiModel(isInMyList: Boolean): ProductUiModel {
         title = title,
         category = category,
         quantityLabel = quantity,
-        storePrices = mockPrices,
+        storePrices = if (storePrices.isNotEmpty()) storePrices else mockPrices,
         isInMyList = isInMyList
     )
 }

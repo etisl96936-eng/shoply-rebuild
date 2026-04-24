@@ -142,14 +142,22 @@ fun ListDetailsScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     stores.forEach { store ->
+
+                        val storeTotal = totals[store] ?: 0.0
+                        val sortedTotals = totals.values.sorted()
+                        val cheapest = sortedTotals.firstOrNull()
+                        val mostExpensive = sortedTotals.lastOrNull()
+
+                        val storeColor = when {
+                            storeTotal == cheapest -> androidx.compose.ui.graphics.Color(0xFFDFF5E1)
+                            storeTotal == mostExpensive -> androidx.compose.ui.graphics.Color(0xFFFFE0E0)
+                            else -> androidx.compose.ui.graphics.Color(0xFFFFF1D6)
+                        }
+
                         Card(
                             modifier = Modifier.weight(1f),
                             colors = CardDefaults.cardColors(
-                                containerColor = if (selectedStore == store) {
-                                    MaterialTheme.colorScheme.primaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceVariant
-                                }
+                                containerColor = storeColor
                             ),
                             onClick = {
                                 viewModel.selectStoreForShoppingList(
@@ -163,7 +171,7 @@ fun ListDetailsScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(store)
-                                Text("₪${"%.2f".format(totals[store] ?: 0.0)}")
+                                Text("₪${"%.2f".format(storeTotal)}")
 
                                 if (selectedStore == store) {
                                     Text(
