@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -59,7 +60,8 @@ import java.util.TimeZone
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(
-    viewModel: ShoppingViewModel
+    viewModel: ShoppingViewModel,
+    onBackClick: () -> Unit = {}
 ) {
     val completedListsState by viewModel.completedListsUiState.collectAsStateWithLifecycle()
     var startDate by remember { mutableStateOf<Long?>(null) }
@@ -142,10 +144,21 @@ fun StatsScreen(
                 verticalArrangement = Arrangement.spacedBy(ShoplySpacing.medium)
             ) {
                 item {
-                    Text(
-                        text = "סטטיסטיקות",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = onBackClick) {
+                            Text("חזרה")
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Text(
+                            text = "סטטיסטיקות",
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                    }
                 }
 
                 item {
@@ -554,15 +567,9 @@ private fun CategoryPieChart(
 
             val dataSet = PieDataSet(entries, "פילוח לפי קטגוריות").apply {
                 valueTextSize = 12f
-                colors = listOf(
-                    AndroidColor.rgb(76, 175, 80),
-                    AndroidColor.rgb(33, 150, 243),
-                    AndroidColor.rgb(255, 193, 7),
-                    AndroidColor.rgb(244, 67, 54),
-                    AndroidColor.rgb(156, 39, 176),
-                    AndroidColor.rgb(0, 150, 136),
-                    AndroidColor.rgb(255, 87, 34)
-                )
+                colors = entries.map { entry ->
+                    getCategoryColor(entry.label)
+                }
             }
 
             chart.data = PieData(dataSet)
@@ -622,6 +629,20 @@ private fun CompletedListsBarChart(
             chart.invalidate()
         }
     )
+}
+
+private fun getCategoryColor(category: String): Int {
+    return when (category) {
+        "פירות וירקות" -> AndroidColor.rgb(76, 175, 80)
+        "מוצרי חלב וביצים" -> AndroidColor.rgb(33, 150, 243)
+        "ניקיון והיגיינה" -> AndroidColor.rgb(156, 39, 176)
+        "מאפה ודגנים" -> AndroidColor.rgb(255, 193, 7)
+        "שימורים ומזווה" -> AndroidColor.rgb(255, 152, 0)
+        "בשר ודגים" -> AndroidColor.rgb(244, 67, 54)
+        "מוצרי מקפיא" -> AndroidColor.rgb(0, 188, 212)
+        "אחר" -> AndroidColor.rgb(158, 158, 158)
+        else -> AndroidColor.rgb(96, 125, 139)
+    }
 }
 
 private class CurrencyValueFormatter : ValueFormatter() {

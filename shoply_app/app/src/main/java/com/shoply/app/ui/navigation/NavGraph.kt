@@ -87,7 +87,12 @@ fun NavGraph(activity: Activity) {
         }
 
         composable(Screen.Stats.route) {
-            StatsScreen(viewModel = shoppingViewModel)
+            StatsScreen(
+                viewModel = shoppingViewModel,
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
         }
 
         composable("completed_lists") {
