@@ -1,5 +1,11 @@
 package com.shoply.app.ui.screens
 
+import android.graphics.Color
+import androidx.compose.ui.viewinterop.AndroidView
+import com.github.mikephil.charting.charts.PieChart
+import com.github.mikephil.charting.data.PieData
+import com.github.mikephil.charting.data.PieDataSet
+import com.github.mikephil.charting.data.PieEntry
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,7 +17,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -260,6 +265,13 @@ fun StatsScreen(
 
                     item {
                         SectionCard(title = "פילוח לפי קטגוריות") {
+
+                            CategoryPieChart(
+                                categoryTotals = categoryCounts.mapValues { it.value.toDouble() }
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
                             val maxCategoryCount = categoryCounts.values.maxOrNull() ?: 1
 
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -503,4 +515,42 @@ private fun pickerUtcMillisToLocalEndOfDay(millis: Long): Long {
         set(java.util.Calendar.SECOND, 59)
         set(java.util.Calendar.MILLISECOND, 999)
     }.timeInMillis
+}
+@Composable
+private fun CategoryPieChart(
+    categoryTotals: Map<String, Double>
+) {
+    AndroidView(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp),
+        factory = { context ->
+            PieChart(context).apply {
+                description.isEnabled = false
+                setUsePercentValues(true)
+                setEntryLabelTextSize(12f)
+                legend.isEnabled = true
+                animateY(1000)
+            }
+        },
+        update = { chart ->
+            val entries = categoryTotals.map { (category, total) ->
+                PieEntry(total.toFloat(), category)
+            }
+
+            val dataSet = PieDataSet(entries, "פילוח לפי קטגוריות")
+
+            dataSet.valueTextSize = 12f
+            dataSet.colors = listOf(
+                Color.rgb(76, 175, 80),
+                Color.rgb(33, 150, 243),
+                Color.rgb(255, 193, 7),
+                Color.rgb(244, 67, 54),
+                Color.rgb(156, 39, 176)
+            )
+
+            chart.data = PieData(dataSet)
+            chart.invalidate()
+        }
+    )
 }
