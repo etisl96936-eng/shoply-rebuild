@@ -6,6 +6,11 @@ import com.github.mikephil.charting.charts.PieChart
 import com.github.mikephil.charting.data.PieData
 import com.github.mikephil.charting.data.PieDataSet
 import com.github.mikephil.charting.data.PieEntry
+import com.github.mikephil.charting.charts.BarChart
+import com.github.mikephil.charting.data.BarData
+import com.github.mikephil.charting.data.BarDataSet
+import com.github.mikephil.charting.data.BarEntry
+import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -299,6 +304,13 @@ fun StatsScreen(
 
                     item {
                         SectionCard(title = "רשימות שהושלמו") {
+
+                            CompletedListsBarChart(
+                                lists = filteredLists
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
                             filteredLists.forEachIndexed { index, list ->
                                 StatsRow(
                                     title = list.selectedStore,
@@ -550,6 +562,47 @@ private fun CategoryPieChart(
             )
 
             chart.data = PieData(dataSet)
+            chart.invalidate()
+        }
+    )
+}
+@Composable
+private fun CompletedListsBarChart(
+    lists: List<com.shoply.app.data.CompletedShoppingList>
+) {
+    AndroidView(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp),
+        factory = { context ->
+            BarChart(context).apply {
+                description.isEnabled = false
+                legend.isEnabled = false
+                setFitBars(true)
+                animateY(1000)
+
+                axisRight.isEnabled = false
+
+                xAxis.granularity = 1f
+                xAxis.setDrawGridLines(false)
+                xAxis.labelRotationAngle = -30f
+            }
+        },
+        update = { chart ->
+            val entries = lists.mapIndexed { index, list ->
+                BarEntry(index.toFloat(), list.totalAmount.toFloat())
+            }
+
+            val labels = lists.mapIndexed { index, list ->
+                "רשימה ${index + 1}"
+            }
+
+            val dataSet = BarDataSet(entries, "סכום לפי רשימה").apply {
+                valueTextSize = 12f
+            }
+
+            chart.xAxis.valueFormatter = IndexAxisValueFormatter(labels)
+            chart.data = BarData(dataSet)
             chart.invalidate()
         }
     )
