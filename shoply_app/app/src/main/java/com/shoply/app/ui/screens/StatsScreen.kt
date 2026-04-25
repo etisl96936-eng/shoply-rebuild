@@ -1,16 +1,6 @@
 package com.shoply.app.ui.screens
 
-import android.graphics.Color
-import androidx.compose.ui.viewinterop.AndroidView
-import com.github.mikephil.charting.charts.PieChart
-import com.github.mikephil.charting.data.PieData
-import com.github.mikephil.charting.data.PieDataSet
-import com.github.mikephil.charting.data.PieEntry
-import com.github.mikephil.charting.charts.BarChart
-import com.github.mikephil.charting.data.BarData
-import com.github.mikephil.charting.data.BarDataSet
-import com.github.mikephil.charting.data.BarEntry
-import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
+import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -20,34 +10,51 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.github.mikephil.charting.charts.BarChart
+import com.github.mikephil.charting.charts.PieChart
+import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.data.BarData
+import com.github.mikephil.charting.data.BarDataSet
+import com.github.mikephil.charting.data.BarEntry
+import com.github.mikephil.charting.data.PieData
+import com.github.mikephil.charting.data.PieDataSet
+import com.github.mikephil.charting.data.PieEntry
+import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
+import com.github.mikephil.charting.formatter.ValueFormatter
+import com.shoply.app.data.CompletedShoppingList
+import com.shoply.app.data.ShoppingItem
 import com.shoply.app.ui.state.UiState
 import com.shoply.app.ui.theme.ShoplySpacing
 import com.shoply.app.viewmodel.ShoppingViewModel
-import androidx.compose.runtime.setValue
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.TextButton
-
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,19 +106,35 @@ fun StatsScreen(
 
             val totalLists = filteredLists.size
             val totalSpent = filteredLists.sumOf { it.totalAmount }
+            val averageListAmount = if (totalLists > 0) totalSpent / totalLists else 0.0
 
             val totalsByStore = filteredLists
-                .groupBy { it.selectedStore }
+                .groupBy { it.selectedStore.ifBlank { "לא נבחר סופר" } }
                 .mapValues { (_, lists) -> lists.sumOf { it.totalAmount } }
-
-            val purchasesCountByStore = filteredLists
-                .groupBy { it.selectedStore }
-                .mapValues { (_, lists) -> lists.size }
 
             val categoryCounts = filteredLists
                 .flatMap { it.items }
-                .groupBy { it.category }
+                .groupBy { it.category.ifBlank { "כללי" } }
                 .mapValues { (_, items) -> items.size }
+
+            val categoryTotals = filteredLists
+                .flatMap { list ->
+                    list.items.map { item ->
+                        val category = item.category.ifBlank { "כללי" }
+                        val quantity = item.quantity.toDoubleOrNull() ?: 1.0
+                        val price = getSelectedStoreItemPrice(item, list.selectedStore)
+                        category to price * quantity
+                    }
+                }
+                .groupBy({ it.first }, { it.second })
+                .mapValues { (_, values) -> values.sum() }
+                .filterValues { it > 0.0 }
+
+            val topCategory = categoryTotals.maxByOrNull { it.value }?.key
+                ?: categoryCounts.maxByOrNull { it.value }?.key
+                ?: "אין נתונים"
+
+            val highestList = filteredLists.maxByOrNull { it.totalAmount }
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -194,6 +217,12 @@ fun StatsScreen(
                                     style = MaterialTheme.typography.bodyLarge
                                 )
 
+                                Text(
+                                    text = "כדי לראות סטטיסטיקות, השלימי רשימת קניות או הרחיבי את טווח התאריכים.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+
                                 TextButton(
                                     onClick = {
                                         startDate = null
@@ -207,34 +236,42 @@ fun StatsScreen(
                     }
                 } else {
                     item {
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer
-                            )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(20.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                            StatsSummaryCard(
+                                title = "סה\"כ",
+                                value = formatCurrency(totalSpent),
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            StatsSummaryCard(
+                                title = "רשימות",
+                                value = totalLists.toString(),
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            StatsSummaryCard(
+                                title = "ממוצע",
+                                value = formatCurrency(averageListAmount),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    item {
+                        SectionCard(title = "תובנות מהירות") {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(
-                                    text = "💰",
-                                    style = MaterialTheme.typography.headlineLarge
+                                    text = "הקטגוריה המובילה שלך היא: $topCategory",
+                                    style = MaterialTheme.typography.bodyMedium
                                 )
 
-                                Spacer(modifier = Modifier.width(12.dp))
-
-                                Column {
+                                highestList?.let { list ->
                                     Text(
-                                        text = "סה\"כ הוצאות",
+                                        text = "הרשימה היקרה ביותר הייתה ב-${formatTimestamp(list.completedAt)} בסכום ${formatCurrency(list.totalAmount)}",
                                         style = MaterialTheme.typography.bodyMedium
-                                    )
-
-                                    Text(
-                                        text = "₪%.2f".format(totalSpent),
-                                        style = MaterialTheme.typography.headlineMedium,
-                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             }
@@ -253,7 +290,7 @@ fun StatsScreen(
                                             horizontalArrangement = Arrangement.SpaceBetween
                                         ) {
                                             Text(store)
-                                            Text("₪%.2f".format(total))
+                                            Text(formatCurrency(total))
                                         }
 
                                         Spacer(modifier = Modifier.height(4.dp))
@@ -270,9 +307,14 @@ fun StatsScreen(
 
                     item {
                         SectionCard(title = "פילוח לפי קטגוריות") {
+                            val pieChartData = if (categoryTotals.isNotEmpty()) {
+                                categoryTotals
+                            } else {
+                                categoryCounts.mapValues { it.value.toDouble() }
+                            }
 
                             CategoryPieChart(
-                                categoryTotals = categoryCounts.mapValues { it.value.toDouble() }
+                                categoryTotals = pieChartData
                             )
 
                             Spacer(modifier = Modifier.height(16.dp))
@@ -304,7 +346,6 @@ fun StatsScreen(
 
                     item {
                         SectionCard(title = "רשימות שהושלמו") {
-
                             CompletedListsBarChart(
                                 lists = filteredLists
                             )
@@ -313,9 +354,9 @@ fun StatsScreen(
 
                             filteredLists.forEachIndexed { index, list ->
                                 StatsRow(
-                                    title = list.selectedStore,
+                                    title = list.selectedStore.ifBlank { "לא נבחר סופר" },
                                     subtitle = formatTimestamp(list.completedAt),
-                                    value = "₪%.2f".format(list.totalAmount)
+                                    value = formatCurrency(list.totalAmount)
                                 )
 
                                 if (index != filteredLists.lastIndex) {
@@ -330,8 +371,6 @@ fun StatsScreen(
             }
         }
     }
-
-
 
     if (showStartDatePicker) {
         val datePickerState = rememberDatePickerState(
@@ -484,50 +523,6 @@ private fun StatsRow(
     }
 }
 
-private fun formatTimestamp(timestamp: Long): String {
-    val formatter = java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale("he"))
-    return formatter.format(java.util.Date(timestamp))
-}
-
-private fun pickerUtcMillisToLocalStartOfDay(millis: Long): Long {
-    val utcCalendar = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply {
-        timeInMillis = millis
-    }
-
-    val year = utcCalendar.get(java.util.Calendar.YEAR)
-    val month = utcCalendar.get(java.util.Calendar.MONTH)
-    val day = utcCalendar.get(java.util.Calendar.DAY_OF_MONTH)
-
-    return java.util.Calendar.getInstance().apply {
-        set(java.util.Calendar.YEAR, year)
-        set(java.util.Calendar.MONTH, month)
-        set(java.util.Calendar.DAY_OF_MONTH, day)
-        set(java.util.Calendar.HOUR_OF_DAY, 0)
-        set(java.util.Calendar.MINUTE, 0)
-        set(java.util.Calendar.SECOND, 0)
-        set(java.util.Calendar.MILLISECOND, 0)
-    }.timeInMillis
-}
-
-private fun pickerUtcMillisToLocalEndOfDay(millis: Long): Long {
-    val utcCalendar = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply {
-        timeInMillis = millis
-    }
-
-    val year = utcCalendar.get(java.util.Calendar.YEAR)
-    val month = utcCalendar.get(java.util.Calendar.MONTH)
-    val day = utcCalendar.get(java.util.Calendar.DAY_OF_MONTH)
-
-    return java.util.Calendar.getInstance().apply {
-        set(java.util.Calendar.YEAR, year)
-        set(java.util.Calendar.MONTH, month)
-        set(java.util.Calendar.DAY_OF_MONTH, day)
-        set(java.util.Calendar.HOUR_OF_DAY, 23)
-        set(java.util.Calendar.MINUTE, 59)
-        set(java.util.Calendar.SECOND, 59)
-        set(java.util.Calendar.MILLISECOND, 999)
-    }.timeInMillis
-}
 @Composable
 private fun CategoryPieChart(
     categoryTotals: Map<String, Double>
@@ -542,33 +537,43 @@ private fun CategoryPieChart(
                 setUsePercentValues(true)
                 setEntryLabelTextSize(12f)
                 legend.isEnabled = true
+                setNoDataText("אין נתוני קטגוריות להצגה")
                 animateY(1000)
             }
         },
         update = { chart ->
+            if (categoryTotals.isEmpty() || categoryTotals.values.all { it <= 0.0 }) {
+                chart.clear()
+                chart.invalidate()
+                return@AndroidView
+            }
+
             val entries = categoryTotals.map { (category, total) ->
                 PieEntry(total.toFloat(), category)
             }
 
-            val dataSet = PieDataSet(entries, "פילוח לפי קטגוריות")
-
-            dataSet.valueTextSize = 12f
-            dataSet.colors = listOf(
-                Color.rgb(76, 175, 80),
-                Color.rgb(33, 150, 243),
-                Color.rgb(255, 193, 7),
-                Color.rgb(244, 67, 54),
-                Color.rgb(156, 39, 176)
-            )
+            val dataSet = PieDataSet(entries, "פילוח לפי קטגוריות").apply {
+                valueTextSize = 12f
+                colors = listOf(
+                    AndroidColor.rgb(76, 175, 80),
+                    AndroidColor.rgb(33, 150, 243),
+                    AndroidColor.rgb(255, 193, 7),
+                    AndroidColor.rgb(244, 67, 54),
+                    AndroidColor.rgb(156, 39, 176),
+                    AndroidColor.rgb(0, 150, 136),
+                    AndroidColor.rgb(255, 87, 34)
+                )
+            }
 
             chart.data = PieData(dataSet)
             chart.invalidate()
         }
     )
 }
+
 @Composable
 private fun CompletedListsBarChart(
-    lists: List<com.shoply.app.data.CompletedShoppingList>
+    lists: List<CompletedShoppingList>
 ) {
     AndroidView(
         modifier = Modifier
@@ -579,26 +584,37 @@ private fun CompletedListsBarChart(
                 description.isEnabled = false
                 legend.isEnabled = false
                 setFitBars(true)
+                setNoDataText("אין רשימות שהושלמו להצגה")
                 animateY(1000)
 
                 axisRight.isEnabled = false
+                axisLeft.valueFormatter = CurrencyAxisFormatter()
 
+                xAxis.position = XAxis.XAxisPosition.BOTTOM
                 xAxis.granularity = 1f
                 xAxis.setDrawGridLines(false)
                 xAxis.labelRotationAngle = -30f
             }
         },
         update = { chart ->
+            if (lists.isEmpty()) {
+                chart.clear()
+                chart.invalidate()
+                return@AndroidView
+            }
+
             val entries = lists.mapIndexed { index, list ->
                 BarEntry(index.toFloat(), list.totalAmount.toFloat())
             }
 
-            val labels = lists.mapIndexed { index, list ->
-                "רשימה ${index + 1}"
+            val labels = lists.map { list ->
+                formatShortDate(list.completedAt)
             }
 
             val dataSet = BarDataSet(entries, "סכום לפי רשימה").apply {
                 valueTextSize = 12f
+                valueFormatter = CurrencyValueFormatter()
+                colors = listOf(AndroidColor.rgb(76, 175, 80))
             }
 
             chart.xAxis.valueFormatter = IndexAxisValueFormatter(labels)
@@ -606,4 +622,79 @@ private fun CompletedListsBarChart(
             chart.invalidate()
         }
     )
+}
+
+private class CurrencyValueFormatter : ValueFormatter() {
+    override fun getFormattedValue(value: Float): String {
+        return "₪%.0f".format(value)
+    }
+}
+
+private class CurrencyAxisFormatter : ValueFormatter() {
+    override fun getFormattedValue(value: Float): String {
+        return "₪%.0f".format(value)
+    }
+}
+
+private fun getSelectedStoreItemPrice(
+    item: ShoppingItem,
+    selectedStore: String
+): Double {
+    return item.storePrices
+        .firstOrNull { it.storeName == selectedStore }
+        ?.price ?: item.storePrices.firstOrNull()?.price ?: 0.0
+}
+
+private fun formatCurrency(amount: Double): String {
+    return "₪%.2f".format(amount)
+}
+
+private fun formatTimestamp(timestamp: Long): String {
+    val formatter = SimpleDateFormat("dd/MM/yyyy", Locale("he"))
+    return formatter.format(Date(timestamp))
+}
+
+private fun formatShortDate(timestamp: Long): String {
+    val formatter = SimpleDateFormat("dd/MM", Locale("he"))
+    return formatter.format(Date(timestamp))
+}
+
+private fun pickerUtcMillisToLocalStartOfDay(millis: Long): Long {
+    val utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+        timeInMillis = millis
+    }
+
+    val year = utcCalendar.get(Calendar.YEAR)
+    val month = utcCalendar.get(Calendar.MONTH)
+    val day = utcCalendar.get(Calendar.DAY_OF_MONTH)
+
+    return Calendar.getInstance().apply {
+        set(Calendar.YEAR, year)
+        set(Calendar.MONTH, month)
+        set(Calendar.DAY_OF_MONTH, day)
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+}
+
+private fun pickerUtcMillisToLocalEndOfDay(millis: Long): Long {
+    val utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+        timeInMillis = millis
+    }
+
+    val year = utcCalendar.get(Calendar.YEAR)
+    val month = utcCalendar.get(Calendar.MONTH)
+    val day = utcCalendar.get(Calendar.DAY_OF_MONTH)
+
+    return Calendar.getInstance().apply {
+        set(Calendar.YEAR, year)
+        set(Calendar.MONTH, month)
+        set(Calendar.DAY_OF_MONTH, day)
+        set(Calendar.HOUR_OF_DAY, 23)
+        set(Calendar.MINUTE, 59)
+        set(Calendar.SECOND, 59)
+        set(Calendar.MILLISECOND, 999)
+    }.timeInMillis
 }
