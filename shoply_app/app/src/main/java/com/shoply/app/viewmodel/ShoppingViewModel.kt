@@ -577,7 +577,7 @@ class ShoppingViewModel : ViewModel() {
                 storeName = storeName
             )
 
-            loadCurrentShoppingListInfo(listId)
+            loadCurrentShoppingListInfo(listId, uid)
             loadActiveShoppingLists()
         }
     }
