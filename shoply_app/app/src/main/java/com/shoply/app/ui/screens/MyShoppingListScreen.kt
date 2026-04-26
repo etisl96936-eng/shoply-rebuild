@@ -55,6 +55,8 @@ import com.shoply.app.ui.navigation.Screen
 import com.shoply.app.ui.state.UiState
 import com.shoply.app.viewmodel.ShoppingViewModel
 import kotlinx.coroutines.delay
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,7 +66,7 @@ fun MyShoppingListScreen(
 ) {
     val shoppingListsState by viewModel.shoppingListsUiState.collectAsState()
     val actionState by viewModel.shoppingListActionState.collectAsState()
-
+    val snackbarHostState = remember { SnackbarHostState() }
     var showCreateDialog by remember { mutableStateOf(false) }
     var selectedListForMenu by remember { mutableStateOf<ShoppingList?>(null) }
     var listToRename by remember { mutableStateOf<ShoppingList?>(null) }
@@ -74,14 +76,24 @@ fun MyShoppingListScreen(
     var shareEmail by remember { mutableStateOf("") }
     var listToShare by remember { mutableStateOf<ShoppingList?>(null) }
 
+
     LaunchedEffect(Unit) {
         viewModel.loadActiveShoppingLists()
     }
 
     LaunchedEffect(actionState) {
-        if (actionState is UiState.Success) {
-            delay(2500)
-            viewModel.clearShoppingListActionState()
+        when (val state = actionState) {
+            is UiState.Success -> {
+                snackbarHostState.showSnackbar(state.data)
+                viewModel.clearShoppingListActionState()
+            }
+
+            is UiState.Error -> {
+                snackbarHostState.showSnackbar(state.message)
+                viewModel.clearShoppingListActionState()
+            }
+
+            else -> Unit
         }
     }
 
@@ -101,6 +113,7 @@ fun MyShoppingListScreen(
                 }
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(onClick = { showCreateDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "צור רשימה")
@@ -125,34 +138,6 @@ fun MyShoppingListScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-
-            when (val state = actionState) {
-                is UiState.Error -> {
-                    StatusMessageCard(
-                        text = state.message,
-                        isError = true
-                    )
-                }
-
-                is UiState.Success -> {
-                    StatusMessageCard(
-                        text = state.data,
-                        isError = false
-                    )
-                }
-
-                UiState.Loading -> {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        CircularProgressIndicator()
-                        Text("מבצע פעולה...")
-                    }
-                }
-
-                null -> Unit
             }
 
             when (val state = shoppingListsState) {
