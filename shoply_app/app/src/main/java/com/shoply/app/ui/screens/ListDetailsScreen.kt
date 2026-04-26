@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,6 +38,8 @@ fun ListDetailsScreen(
     val itemsState by viewModel.shoppingListItemsUiState.collectAsState()
     var showFinishDialog by remember { mutableStateOf(false) }
     var lastItemToComplete by remember { mutableStateOf<ShoppingItem?>(null) }
+    var showShareDialog by remember { mutableStateOf(false) }
+    var shareEmail by remember { mutableStateOf("") }
 
     LaunchedEffect(listId) {
         viewModel.setCurrentShoppingList(listId)
@@ -121,7 +124,13 @@ fun ListDetailsScreen(
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "חזרה")
                     }
+                },
+                actions = {
+                    IconButton(onClick = { showShareDialog = true }) {
+                        Icon(Icons.Default.Share, contentDescription = "שיתוף")
+                    }
                 }
+
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -295,6 +304,36 @@ fun ListDetailsScreen(
                 }
             }
         }
+    }
+
+    if (showShareDialog) {
+        AlertDialog(
+            onDismissRequest = { showShareDialog = false },
+            title = { Text("שיתוף רשימה") },
+            text = {
+                TextField(
+                    value = shareEmail,
+                    onValueChange = { shareEmail = it },
+                    label = { Text("אימייל משתמש") }
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.shareListWithUser(listId, shareEmail)
+                    showShareDialog = false
+                    shareEmail = ""
+                }) {
+                    Text("שתף")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showShareDialog = false
+                }) {
+                    Text("ביטול")
+                }
+            }
+        )
     }
 }
 

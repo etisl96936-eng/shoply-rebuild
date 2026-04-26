@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import com.shoply.app.data.StorePrice
+import kotlinx.coroutines.tasks.await
 
 
 class ShoppingViewModel : ViewModel() {
@@ -567,6 +568,75 @@ class ShoppingViewModel : ViewModel() {
 
             loadCurrentShoppingListInfo(listId)
             loadActiveShoppingLists()
+        }
+    }
+
+    fun shareListWithUser(listId: String, email: String) {
+        val currentUserId = currentUid
+        if (currentUserId.isBlank()) return
+
+        viewModelScope.launch {
+            try {
+                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+
+                // 1. למצוא משתמש לפי מייל
+                val userQuery = db.collection("users")
+                    .whereEqualTo("email", email)
+                    .get()
+                    .await()
+
+                if (userQuery.isEmpty) {
+                    _shoppingListActionState.value = UiState.Error("לא נמצא משתמש עם המייל הזה")
+                    return@launch
+                }
+
+                val targetUserId = userQuery.documents.first().id
+
+                // 2. להביא את הרשימה הנוכחית
+                val listDoc = db.collection("users")
+                    .document(currentUserId)
+                    .collection("shopping_lists")
+                    .document(listId)
+                    .get()
+                    .await()
+
+                val listData = listDoc.data
+                if (listData == null) {
+                    _shoppingListActionState.value = UiState.Error("הרשימה לא נמצאה")
+                    return@launch
+                }
+
+                // 3. להעתיק למשתמש השני
+                val newListRef = db.collection("users")
+                    .document(targetUserId)
+                    .collection("shopping_lists")
+                    .add(listData)
+                    .await()
+
+
+                val itemsSnapshot = db.collection("users")
+                    .document(currentUserId)
+                    .collection("shopping_lists")
+                    .document(listId)
+                    .collection("items")
+                    .get()
+                    .await()
+
+                itemsSnapshot.documents.forEach { itemDoc ->
+                    db.collection("users")
+                        .document(targetUserId)
+                        .collection("shopping_lists")
+                        .document(newListRef.id)
+                        .collection("items")
+                        .document(itemDoc.id)
+                        .set(itemDoc.data ?: emptyMap<String, Any>())
+                        .await()
+                }
+                _shoppingListActionState.value = UiState.Success("הרשימה שותפה בהצלחה")
+
+            } catch (e: Exception) {
+                _shoppingListActionState.value = UiState.Error("שגיאה בשיתוף הרשימה")
+            }
         }
     }
 }
