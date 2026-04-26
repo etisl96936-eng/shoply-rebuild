@@ -30,6 +30,7 @@ fun ListDetailsScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val actionState by viewModel.shoppingListActionState.collectAsState()
     var newItemName by remember { mutableStateOf("") }
     var newItemQuantity by remember { mutableStateOf("1") }
     var showSelectStoreDialog by remember { mutableStateOf(false) }
@@ -43,6 +44,21 @@ fun ListDetailsScreen(
 
     LaunchedEffect(listId) {
         viewModel.setCurrentShoppingList(listId)
+    }
+    LaunchedEffect(actionState) {
+        when (val state = actionState) {
+            is UiState.Success -> {
+                snackbarHostState.showSnackbar(state.data)
+                viewModel.clearShoppingListActionState()
+            }
+
+            is UiState.Error -> {
+                snackbarHostState.showSnackbar(state.message)
+                viewModel.clearShoppingListActionState()
+            }
+
+            else -> Unit
+        }
     }
 
     val items = (itemsState as? UiState.Success)?.data ?: emptyList()
