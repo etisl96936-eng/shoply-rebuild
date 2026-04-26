@@ -416,13 +416,13 @@ private fun StatusMessageCard(
     val containerColor = if (isError) {
         MaterialTheme.colorScheme.errorContainer
     } else {
-        MaterialTheme.colorScheme.surfaceVariant
+        androidx.compose.ui.graphics.Color(0xFFDFF5E1)
     }
 
     val contentColor = if (isError) {
         MaterialTheme.colorScheme.onErrorContainer
     } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
+        androidx.compose.ui.graphics.Color(0xFF1B5E20)
     }
 
     Surface(
