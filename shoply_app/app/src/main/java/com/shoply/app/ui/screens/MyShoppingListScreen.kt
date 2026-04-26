@@ -165,8 +165,13 @@ fun MyShoppingListScreen(
                     } else {
                         val currentUserId = viewModel.getCurrentUserId()
 
-                        val myLists = state.data.filter { it.ownerUid == currentUserId }
-                        val sharedLists = state.data.filter { it.ownerUid != currentUserId }
+                        val myLists = state.data.filter { list ->
+                            list.ownerUid == currentUserId || !list.sharedWith.contains(currentUserId)
+                        }
+
+                        val sharedLists = state.data.filter { list ->
+                            list.ownerUid != currentUserId && list.sharedWith.contains(currentUserId)
+                        }
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(bottom = 24.dp),
