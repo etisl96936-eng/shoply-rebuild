@@ -618,8 +618,10 @@ class ShoppingViewModel : ViewModel() {
                     .collection("shopping_lists")
                     .document(listId)
                     .update(
-                        "sharedWith",
-                        com.google.firebase.firestore.FieldValue.arrayUnion(targetUserId)
+                        mapOf(
+                            "sharedWith" to com.google.firebase.firestore.FieldValue.arrayUnion(targetUserId),
+                            "sharedByEmail" to (auth.currentUser?.email ?: "")
+                        )
                     )
                     .await()
 

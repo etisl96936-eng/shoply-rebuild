@@ -9,7 +9,8 @@ data class ShoppingList(
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
     val completedAt: Long? = null,
-    val sharedWith: List<String> = emptyList()
+    val sharedWith: List<String> = emptyList(),
+    val sharedByEmail: String = ""
 ) {
     companion object {
         const val STATUS_ACTIVE = "active"

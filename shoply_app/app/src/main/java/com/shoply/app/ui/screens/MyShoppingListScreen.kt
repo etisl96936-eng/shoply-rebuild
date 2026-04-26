@@ -481,6 +481,13 @@ private fun ShoppingListCard(
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold
                     )
+                    if (isShared && shoppingList.sharedByEmail.isNotBlank()) {
+                        Text(
+                            text = "שותף ע״י: ${shoppingList.sharedByEmail}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
 
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
