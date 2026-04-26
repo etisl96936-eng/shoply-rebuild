@@ -70,7 +70,9 @@ fun MyShoppingListScreen(
     var listToRename by remember { mutableStateOf<ShoppingList?>(null) }
     var listToArchive by remember { mutableStateOf<ShoppingList?>(null) }
     var listToDelete by remember { mutableStateOf<ShoppingList?>(null) }
-    var showShareInfoDialog by remember { mutableStateOf(false) }
+    var showShareDialog by remember { mutableStateOf(false) }
+    var shareEmail by remember { mutableStateOf("") }
+    var listToShare by remember { mutableStateOf<ShoppingList?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.loadActiveShoppingLists()
@@ -223,8 +225,9 @@ fun MyShoppingListScreen(
                 listToRename = shoppingList
             },
             onShare = {
+                listToShare = shoppingList
                 selectedListForMenu = null
-                showShareInfoDialog = true
+                showShareDialog = true
             },
             onArchive = {
                 selectedListForMenu = null
@@ -294,16 +297,40 @@ fun MyShoppingListScreen(
         )
     }
 
-    if (showShareInfoDialog) {
+    if (showShareDialog && listToShare != null) {
         AlertDialog(
-            onDismissRequest = { showShareInfoDialog = false },
+            onDismissRequest = {
+                showShareDialog = false
+                listToShare = null
+            },
             title = { Text("שיתוף רשימה") },
             text = {
-                Text("תפריט השיתוף נוסף ל־UI. בשלב הבא נחבר אותו בפועל לבחירת משתמשים ושיתוף הרשימה.")
+                OutlinedTextField(
+                    value = shareEmail,
+                    onValueChange = { shareEmail = it },
+                    label = { Text("אימייל משתמש") },
+                    modifier = Modifier.fillMaxWidth()
+                )
             },
             confirmButton = {
-                TextButton(onClick = { showShareInfoDialog = false }) {
-                    Text("הבנתי")
+                TextButton(onClick = {
+                    viewModel.shareListWithUser(
+                        listToShare!!.id,
+                        shareEmail
+                    )
+                    showShareDialog = false
+                    shareEmail = ""
+                    listToShare = null
+                }) {
+                    Text("שתף")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showShareDialog = false
+                    listToShare = null
+                }) {
+                    Text("ביטול")
                 }
             }
         )
