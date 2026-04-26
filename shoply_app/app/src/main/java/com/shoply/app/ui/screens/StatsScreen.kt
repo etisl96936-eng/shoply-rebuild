@@ -231,7 +231,7 @@ fun StatsScreen(
                                 )
 
                                 Text(
-                                    text = "כדי לראות סטטיסטיקות, השלימי רשימת קניות או הרחיבי את טווח התאריכים.",
+                                    text = "כדי לראות סטטיסטיקות, השלם רשימת קניות או הרחב את טווח התאריכים.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
