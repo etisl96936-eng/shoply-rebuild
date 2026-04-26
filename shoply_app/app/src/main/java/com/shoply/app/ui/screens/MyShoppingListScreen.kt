@@ -416,13 +416,13 @@ private fun StatusMessageCard(
     val containerColor = if (isError) {
         MaterialTheme.colorScheme.errorContainer
     } else {
-        MaterialTheme.colorScheme.surfaceVariant
+        androidx.compose.ui.graphics.Color(0xFFDFF5E1)
     }
 
     val contentColor = if (isError) {
         MaterialTheme.colorScheme.onErrorContainer
     } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
+        androidx.compose.ui.graphics.Color(0xFF1B5E20)
     }
 
     Surface(
@@ -481,6 +481,13 @@ private fun ShoppingListCard(
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold
                     )
+                    if (isShared && shoppingList.sharedByEmail.isNotBlank()) {
+                        Text(
+                            text = "שותף ע״י: ${shoppingList.sharedByEmail}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
 
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
