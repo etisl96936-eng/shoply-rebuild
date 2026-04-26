@@ -20,6 +20,9 @@ import com.shoply.app.ui.screens.RegisterScreen
 import com.shoply.app.ui.screens.StatsScreen
 import com.shoply.app.viewmodel.AuthViewModel
 import com.shoply.app.viewmodel.ShoppingViewModel
+import com.shoply.app.ui.screens.CompletedListDetailsScreen
+
+
 
 /**
  * NavGraph - ניהול ניווט ראשי של האפליקציה
@@ -96,7 +99,25 @@ fun NavGraph(activity: Activity) {
         }
 
         composable("completed_lists") {
-            CompletedListsScreen(viewModel = shoppingViewModel)
+            CompletedListsScreen(
+                viewModel = shoppingViewModel,
+                onListClick = { completedList ->
+                    navController.navigate("completed_list_details/${completedList.id}")
+                }
+            )
+        }
+
+        composable(
+            route = "completed_list_details/{listId}",
+            arguments = listOf(navArgument("listId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val listId = backStackEntry.arguments?.getString("listId") ?: ""
+
+            CompletedListDetailsScreen(
+                listId = listId,
+                navController = navController,
+                viewModel = shoppingViewModel
+            )
         }
 
         composable(Screen.MyLists.route) {
@@ -115,6 +136,20 @@ fun NavGraph(activity: Activity) {
             val listId = backStackEntry.arguments?.getString("listId") ?: ""
 
             ListDetailsScreen(
+                listId = listId,
+                navController = navController,
+                viewModel = shoppingViewModel
+            )
+        }
+
+
+        composable(
+            route = "completed_list_details/{listId}",
+            arguments = listOf(navArgument("listId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val listId = backStackEntry.arguments?.getString("listId") ?: ""
+
+            CompletedListDetailsScreen(
                 listId = listId,
                 navController = navController,
                 viewModel = shoppingViewModel
