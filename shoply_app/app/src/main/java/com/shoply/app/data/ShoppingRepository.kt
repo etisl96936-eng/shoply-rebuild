@@ -115,14 +115,29 @@ class ShoppingRepository {
     }
 
     suspend fun getActiveShoppingLists(uid: String): Result<List<ShoppingList>> = runCatching {
-        val snapshot = shoppingListsCollection(uid)
+        val mySnapshot = shoppingListsCollection(uid)
             .whereEqualTo("status", ShoppingList.STATUS_ACTIVE)
             .get()
             .await()
 
-        snapshot.documents.mapNotNull { doc ->
+        val sharedSnapshot = firestore
+            .collectionGroup("shopping_lists")
+            .whereEqualTo("status", ShoppingList.STATUS_ACTIVE)
+            .whereArrayContains("sharedWith", uid)
+            .get()
+            .await()
+
+        val myLists = mySnapshot.documents.mapNotNull { doc ->
             doc.toObject(ShoppingList::class.java)?.copy(id = doc.id)
-        }.sortedByDescending { it.updatedAt }
+        }
+
+        val sharedLists = sharedSnapshot.documents.mapNotNull { doc ->
+            doc.toObject(ShoppingList::class.java)?.copy(id = doc.id)
+        }
+
+        (myLists + sharedLists)
+            .distinctBy { it.id }
+            .sortedByDescending { it.updatedAt }
     }
 
     suspend fun getShoppingListById(

@@ -178,26 +178,62 @@ fun MyShoppingListScreen(
                             onCreateClick = { showCreateDialog = true }
                         )
                     } else {
+                        val currentUserId = viewModel.getCurrentUserId()
+
+                        val myLists = state.data.filter { it.ownerUid == currentUserId }
+                        val sharedLists = state.data.filter { it.ownerUid != currentUserId }
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(bottom = 24.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            items(state.data, key = { it.id }) { shoppingList ->
-                                ShoppingListCard(
-                                    shoppingList = shoppingList,
-                                    onClick = {
-                                        navController.navigate(
-                                            Screen.ListDetails.createRoute(shoppingList.id)
-                                        )
-                                    },
-                                    onLongClick = {
-                                        selectedListForMenu = shoppingList
-                                    },
-                                    onMenuClick = {
-                                        selectedListForMenu = shoppingList
-                                    }
-                                )
+
+                            if (myLists.isNotEmpty()) {
+                                item {
+                                    Text(
+                                        text = "הרשימות שלי",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                items(myLists, key = { it.id }) { shoppingList ->
+                                    ShoppingListCard(
+                                        shoppingList = shoppingList,
+                                        onClick = {
+                                            navController.navigate(
+                                                Screen.ListDetails.createRoute(shoppingList.id)
+                                            )
+                                        },
+                                        onLongClick = { selectedListForMenu = shoppingList },
+                                        onMenuClick = { selectedListForMenu = shoppingList }
+                                    )
+                                }
+                            }
+
+                            if (sharedLists.isNotEmpty()) {
+                                item {
+                                    Text(
+                                        text = "רשימות ששותפו איתי",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(top = 12.dp)
+                                    )
+                                }
+
+                                items(sharedLists, key = { it.id }) { shoppingList ->
+                                    ShoppingListCard(
+                                        shoppingList = shoppingList,
+                                        isShared = true,
+                                        onClick = {
+                                            navController.navigate(
+                                                Screen.ListDetails.createRoute(shoppingList.id)
+                                            )
+                                        },
+                                        onLongClick = { selectedListForMenu = shoppingList },
+                                        onMenuClick = { selectedListForMenu = shoppingList }
+                                    )
+                                }
                             }
                         }
                     }
@@ -407,6 +443,7 @@ private fun StatusMessageCard(
 @Composable
 private fun ShoppingListCard(
     shoppingList: ShoppingList,
+    isShared: Boolean = false,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onMenuClick: () -> Unit
@@ -419,7 +456,11 @@ private fun ShoppingListCard(
                 onLongClick = onLongClick
             ),
         colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = if (isShared) {
+                androidx.compose.ui.graphics.Color(0xFFE6F4EA)
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
         ),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
     ) {

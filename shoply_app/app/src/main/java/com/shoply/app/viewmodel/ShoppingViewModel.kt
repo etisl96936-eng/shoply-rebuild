@@ -97,6 +97,7 @@ class ShoppingViewModel : ViewModel() {
     val shoppingListActionState: StateFlow<UiState<String>?> = _shoppingListActionState
 
     private val _currentShoppingListId = MutableStateFlow<String?>(null)
+    private val _currentShoppingListOwnerUid = MutableStateFlow<String?>(null)
 
     private val _currentShoppingListInfoUiState =
         MutableStateFlow<UiState<ShoppingList>?>(null)
@@ -113,7 +114,9 @@ class ShoppingViewModel : ViewModel() {
                         if (uid.isBlank()) {
                             flowOf(UiState.Error("לא נמצא משתמש מחובר"))
                         } else {
-                            repository.getShoppingListItemsFlow(uid, listId)
+                            val ownerUid = _currentShoppingListOwnerUid.value ?: uid
+
+                            repository.getShoppingListItemsFlow(ownerUid, listId)
                                 .map { items ->
                                     UiState.Success(items) as UiState<List<ShoppingItem>>
                                 }
@@ -135,7 +138,7 @@ class ShoppingViewModel : ViewModel() {
     val shoppingListItemsActionState: StateFlow<UiState<String>?> = _shoppingListItemsActionState
 
     fun loadActiveShoppingLists() {
-        val uid = currentUid
+        val uid = _currentShoppingListOwnerUid.value ?: currentUid
         if (uid.isBlank()) {
             _shoppingListsUiState.value = UiState.Error("לא נמצא משתמש מחובר")
             return
@@ -153,7 +156,7 @@ class ShoppingViewModel : ViewModel() {
     }
 
     fun createShoppingList(name: String) {
-        val uid = currentUid
+        val uid = _currentShoppingListOwnerUid.value ?: currentUid
         if (uid.isBlank()) {
             _shoppingListActionState.value = UiState.Error("לא נמצא משתמש מחובר")
             return
@@ -176,7 +179,7 @@ class ShoppingViewModel : ViewModel() {
     }
 
     fun updateShoppingListName(listId: String, newName: String) {
-        val uid = currentUid
+        val uid = _currentShoppingListOwnerUid.value ?: currentUid
         if (uid.isBlank()) {
             _shoppingListActionState.value = UiState.Error("לא נמצא משתמש מחובר")
             return
@@ -204,7 +207,7 @@ class ShoppingViewModel : ViewModel() {
     }
 
     fun archiveShoppingList(listId: String) {
-        val uid = currentUid
+        val uid = _currentShoppingListOwnerUid.value ?: currentUid
         if (uid.isBlank()) {
             _shoppingListActionState.value = UiState.Error("לא נמצא משתמש מחובר")
             return
@@ -227,7 +230,7 @@ class ShoppingViewModel : ViewModel() {
     }
 
     fun deleteShoppingList(listId: String) {
-        val uid = currentUid
+        val uid = _currentShoppingListOwnerUid.value ?: currentUid
         if (uid.isBlank()) {
             _shoppingListActionState.value = UiState.Error("לא נמצא משתמש מחובר")
             return
@@ -254,12 +257,20 @@ class ShoppingViewModel : ViewModel() {
     }
 
     fun setCurrentShoppingList(listId: String) {
+        val list = (_shoppingListsUiState.value as? UiState.Success)
+            ?.data
+            ?.firstOrNull { it.id == listId }
+
+        val ownerUid = list?.ownerUid?.takeIf { it.isNotBlank() } ?: currentUid
+
+        _currentShoppingListOwnerUid.value = ownerUid
         _currentShoppingListId.value = listId
-        loadCurrentShoppingListInfo(listId)
+
+        loadCurrentShoppingListInfo(listId, ownerUid)
     }
 
-    private fun loadCurrentShoppingListInfo(listId: String) {
-        val uid = currentUid
+    private fun loadCurrentShoppingListInfo(listId: String, ownerUid: String? = null) {
+        val uid = ownerUid ?: currentUid
         if (uid.isBlank()) {
             _currentShoppingListInfoUiState.value = UiState.Error("לא נמצא משתמש מחובר")
             return
@@ -279,7 +290,7 @@ class ShoppingViewModel : ViewModel() {
     }
 
     fun addItemToCurrentShoppingList(listId: String, itemName: String, quantity: String) {
-        val uid = currentUid
+        val uid = _currentShoppingListOwnerUid.value ?: currentUid
         if (uid.isBlank()) {
             _shoppingListItemsActionState.value = UiState.Error("לא נמצא משתמש מחובר")
             return
@@ -313,7 +324,7 @@ class ShoppingViewModel : ViewModel() {
     }
 
     fun addCatalogItemToShoppingList(listId: String, item: ShoppingItem, quantity: String) {
-        val uid = currentUid
+        val uid = _currentShoppingListOwnerUid.value ?: currentUid
         if (uid.isBlank()) {
             _shoppingListItemsActionState.value = UiState.Error("לא נמצא משתמש מחובר")
             return
@@ -342,7 +353,7 @@ class ShoppingViewModel : ViewModel() {
     }
 
     fun toggleItemCheckedInCurrentShoppingList(listId: String, item: ShoppingItem) {
-        val uid = currentUid
+        val uid = _currentShoppingListOwnerUid.value ?: currentUid
         if (uid.isBlank()) {
             _shoppingListItemsActionState.value = UiState.Error("לא נמצא משתמש מחובר")
             return
@@ -369,7 +380,7 @@ class ShoppingViewModel : ViewModel() {
     }
 
     fun updateItemQuantityInCurrentShoppingList(listId: String, itemId: String, quantity: String) {
-        val uid = currentUid
+        val uid = _currentShoppingListOwnerUid.value ?: currentUid
         if (uid.isBlank()) {
             _shoppingListItemsActionState.value = UiState.Error("לא נמצא משתמש מחובר")
             return
@@ -396,7 +407,7 @@ class ShoppingViewModel : ViewModel() {
     }
 
     fun deleteItemFromCurrentShoppingList(listId: String, itemId: String) {
-        val uid = currentUid
+        val uid = _currentShoppingListOwnerUid.value ?: currentUid
         if (uid.isBlank()) {
             _shoppingListItemsActionState.value = UiState.Error("לא נמצא משתמש מחובר")
             return
@@ -479,7 +490,7 @@ class ShoppingViewModel : ViewModel() {
     // =========================
 
     fun toggleItemInMyList(item: ShoppingItem) {
-        val uid = currentUid
+        val uid = _currentShoppingListOwnerUid.value ?: currentUid
         if (uid.isBlank()) return
 
         viewModelScope.launch {
@@ -488,7 +499,7 @@ class ShoppingViewModel : ViewModel() {
     }
 
     fun togglePurchasedInMyList(item: ShoppingItem) {
-        val uid = currentUid
+        val uid = _currentShoppingListOwnerUid.value ?: currentUid
         if (uid.isBlank()) return
 
         viewModelScope.launch {
@@ -501,7 +512,7 @@ class ShoppingViewModel : ViewModel() {
     }
 
     fun removeFromMyList(itemId: String) {
-        val uid = currentUid
+        val uid = _currentShoppingListOwnerUid.value ?: currentUid
         if (uid.isBlank()) return
 
         viewModelScope.launch {
@@ -515,7 +526,7 @@ class ShoppingViewModel : ViewModel() {
         selectedStore: String,
         totalAmount: Double
     ) {
-        val uid = currentUid
+        val uid = _currentShoppingListOwnerUid.value ?: currentUid
         if (uid.isBlank()) return
 
         viewModelScope.launch {
@@ -530,7 +541,7 @@ class ShoppingViewModel : ViewModel() {
     }
 
     fun deleteCompletedList(listId: String) {
-        val uid = currentUid
+        val uid = _currentShoppingListOwnerUid.value ?: currentUid
         if (uid.isBlank()) return
 
         viewModelScope.launch {
@@ -556,7 +567,7 @@ class ShoppingViewModel : ViewModel() {
     }
 
     fun selectStoreForShoppingList(listId: String, storeName: String) {
-        val uid = currentUid
+        val uid = _currentShoppingListOwnerUid.value ?: currentUid
         if (uid.isBlank()) return
 
         viewModelScope.launch {
@@ -579,9 +590,8 @@ class ShoppingViewModel : ViewModel() {
             try {
                 val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
 
-                // 1. למצוא משתמש לפי מייל
                 val userQuery = db.collection("users")
-                    .whereEqualTo("email", email)
+                    .whereEqualTo("email", email.trim())
                     .get()
                     .await()
 
@@ -592,46 +602,27 @@ class ShoppingViewModel : ViewModel() {
 
                 val targetUserId = userQuery.documents.first().id
 
-                // 2. להביא את הרשימה הנוכחית
-                val listDoc = db.collection("users")
-                    .document(currentUserId)
-                    .collection("shopping_lists")
-                    .document(listId)
-                    .get()
-                    .await()
-
-                val listData = listDoc.data
-                if (listData == null) {
-                    _shoppingListActionState.value = UiState.Error("הרשימה לא נמצאה")
+                if (targetUserId == currentUserId) {
+                    _shoppingListActionState.value = UiState.Error("לא ניתן לשתף רשימה עם עצמך")
                     return@launch
                 }
 
-                // 3. להעתיק למשתמש השני
-                val newListRef = db.collection("users")
-                    .document(targetUserId)
-                    .collection("shopping_lists")
-                    .add(listData)
-                    .await()
+                val list = (_shoppingListsUiState.value as? UiState.Success)
+                    ?.data
+                    ?.firstOrNull { it.id == listId }
 
+                val ownerUid = list?.ownerUid?.takeIf { it.isNotBlank() } ?: currentUserId
 
-                val itemsSnapshot = db.collection("users")
-                    .document(currentUserId)
+                db.collection("users")
+                    .document(ownerUid)
                     .collection("shopping_lists")
                     .document(listId)
-                    .collection("items")
-                    .get()
+                    .update(
+                        "sharedWith",
+                        com.google.firebase.firestore.FieldValue.arrayUnion(targetUserId)
+                    )
                     .await()
 
-                itemsSnapshot.documents.forEach { itemDoc ->
-                    db.collection("users")
-                        .document(targetUserId)
-                        .collection("shopping_lists")
-                        .document(newListRef.id)
-                        .collection("items")
-                        .document(itemDoc.id)
-                        .set(itemDoc.data ?: emptyMap<String, Any>())
-                        .await()
-                }
                 _shoppingListActionState.value = UiState.Success("הרשימה שותפה בהצלחה")
 
             } catch (e: Exception) {
@@ -639,4 +630,6 @@ class ShoppingViewModel : ViewModel() {
             }
         }
     }
+
+    fun getCurrentUserId(): String = currentUid
 }
