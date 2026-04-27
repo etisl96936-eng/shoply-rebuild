@@ -20,7 +20,7 @@ import com.shoply.app.ui.theme.ShoplySpacing
 @Composable
 fun LoadingView(
     modifier: Modifier = Modifier,
-    message: String = "Loading..."
+    message: String = "מנסה להתחבר לשרת..."
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -30,10 +30,20 @@ fun LoadingView(
         CircularProgressIndicator(
             color = MaterialTheme.colorScheme.primary
         )
-        Spacer(modifier = Modifier.height(ShoplySpacing.small))
+
+        Spacer(modifier = Modifier.height(ShoplySpacing.medium))
+
         Text(
             text = message,
             style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(modifier = Modifier.height(ShoplySpacing.small))
+
+        Text(
+            text = "זה עשוי לקחת כמה רגעים בטעינה ראשונה",
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }

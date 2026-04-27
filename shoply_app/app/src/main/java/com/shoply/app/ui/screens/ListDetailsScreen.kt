@@ -189,9 +189,11 @@ fun ListDetailsScreen(
                                 containerColor = storeColor
                             ),
                             onClick = {
+                                val newSelectedStore = if (selectedStore == store) "" else store
+
                                 viewModel.selectStoreForShoppingList(
                                     listId = listId,
-                                    storeName = if (selectedStore == store) "" else store
+                                    storeName = newSelectedStore
                                 )
                             }
                         ) {
