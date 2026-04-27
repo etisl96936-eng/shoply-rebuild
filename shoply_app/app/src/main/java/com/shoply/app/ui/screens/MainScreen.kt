@@ -133,7 +133,7 @@ fun MainScreen(
                 },
                 onStatsClick = {
                     closeDrawerAnd {
-                        navController.navigate(Screen.Stats.route)
+                        navController.navigate(Screen.Stats.route + "/$isAdmin")
                     }
                 },
                 onCompletedListsClick = {

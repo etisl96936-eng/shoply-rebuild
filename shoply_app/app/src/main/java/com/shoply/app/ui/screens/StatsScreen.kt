@@ -22,10 +22,13 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,11 +49,13 @@ import com.github.mikephil.charting.data.PieDataSet
 import com.github.mikephil.charting.data.PieEntry
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
 import com.github.mikephil.charting.formatter.ValueFormatter
+import com.google.firebase.firestore.FirebaseFirestore
 import com.shoply.app.data.CompletedShoppingList
 import com.shoply.app.data.ShoppingItem
 import com.shoply.app.ui.state.UiState
 import com.shoply.app.ui.theme.ShoplySpacing
 import com.shoply.app.viewmodel.ShoppingViewModel
+import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -61,13 +66,17 @@ import java.util.TimeZone
 @Composable
 fun StatsScreen(
     viewModel: ShoppingViewModel,
+    isAdmin: Boolean = false,
     onBackClick: () -> Unit = {}
 ) {
     val completedListsState by viewModel.completedListsUiState.collectAsStateWithLifecycle()
+    val catalogState by viewModel.catalogUiState.collectAsStateWithLifecycle()
+
     var startDate by remember { mutableStateOf<Long?>(null) }
     var endDate by remember { mutableStateOf<Long?>(null) }
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableStateOf(0) }
 
     when (val state = completedListsState) {
         is UiState.Loading -> {
@@ -125,7 +134,7 @@ fun StatsScreen(
                         val category = item.category.ifBlank { "כללי" }
                         val quantity = item.quantity.toDoubleOrNull() ?: 1.0
                         val price = getSelectedStoreItemPrice(item, list.selectedStore)
-                        category to price * quantity
+                        category to (price * quantity)
                     }
                 }
                 .groupBy({ it.first }, { it.second })
@@ -162,223 +171,260 @@ fun StatsScreen(
                 }
 
                 item {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                    TabRow(selectedTabIndex = selectedTab) {
+                        Tab(
+                            selected = selectedTab == 0,
+                            onClick = { selectedTab = 0 }
                         ) {
-                            Text(
-                                text = "טווח תאריכים",
-                                style = MaterialTheme.typography.titleMedium
-                            )
+                            Text("רשימות")
+                        }
 
+                        if (isAdmin) {
+                            Tab(
+                                selected = selectedTab == 1,
+                                onClick = { selectedTab = 1 }
+                            ) {
+                                Text("קטלוג")
+                            }
+
+                            Tab(
+                                selected = selectedTab == 2,
+                                onClick = { selectedTab = 2 }
+                            ) {
+                                Text("משתמשים")
+                            }
+                        }
+                    }
+                }
+
+                if (selectedTab == 0) {
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Text(
+                                    text = "טווח תאריכים",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { showStartDatePicker = true },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(startDate?.let { formatTimestamp(it) } ?: "מתאריך")
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = { showEndDatePicker = true },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(endDate?.let { formatTimestamp(it) } ?: "עד תאריך")
+                                    }
+                                }
+
+                                if (startDate != null || endDate != null) {
+                                    TextButton(
+                                        onClick = {
+                                            startDate = null
+                                            endDate = null
+                                        }
+                                    ) {
+                                        Text("נקה סינון")
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (filteredLists.isEmpty()) {
+                        item {
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(24.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Text(
+                                        text = "אין רשימות בטווח התאריכים שנבחר",
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+
+                                    Text(
+                                        text = "כדי לראות סטטיסטיקות, השלם רשימת קניות או הרחב את טווח התאריכים.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+
+                                    TextButton(
+                                        onClick = {
+                                            startDate = null
+                                            endDate = null
+                                        }
+                                    ) {
+                                        Text("נקה סינון")
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        item {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
                             ) {
-                                OutlinedButton(
-                                    onClick = { showStartDatePicker = true },
+                                StatsSummaryCard(
+                                    title = "סה\"כ",
+                                    value = formatCurrency(totalSpent),
                                     modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(startDate?.let { formatTimestamp(it) } ?: "מתאריך")
-                                }
+                                )
 
-                                OutlinedButton(
-                                    onClick = { showEndDatePicker = true },
+                                StatsSummaryCard(
+                                    title = "רשימות",
+                                    value = totalLists.toString(),
                                     modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(endDate?.let { formatTimestamp(it) } ?: "עד תאריך")
+                                )
+
+                                StatsSummaryCard(
+                                    title = "ממוצע",
+                                    value = formatCurrency(averageListAmount),
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+
+                        item {
+                            SectionCard(title = "תובנות מהירות") {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text(
+                                        text = "הקטגוריה המובילה שלך היא: $topCategory",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+
+                                    highestList?.let { list ->
+                                        Text(
+                                            text = "הרשימה היקרה ביותר הייתה ב-${formatTimestamp(list.completedAt)} בסכום ${formatCurrency(list.totalAmount)}",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
                                 }
                             }
+                        }
 
-                            if (startDate != null || endDate != null) {
-                                TextButton(
-                                    onClick = {
-                                        startDate = null
-                                        endDate = null
+                        item {
+                            SectionCard(title = "פילוח לפי סופרים") {
+                                val maxStoreTotal = totalsByStore.values.maxOrNull() ?: 1.0
+
+                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    totalsByStore.forEach { (store, total) ->
+                                        Column {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(store)
+                                                Text(formatCurrency(total))
+                                            }
+
+                                            Spacer(modifier = Modifier.height(4.dp))
+
+                                            LinearProgressIndicator(
+                                                progress = (total / maxStoreTotal).toFloat(),
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        }
                                     }
-                                ) {
-                                    Text("נקה סינון")
+                                }
+                            }
+                        }
+
+                        item {
+                            SectionCard(title = "פילוח לפי קטגוריות") {
+                                val pieChartData = if (categoryTotals.isNotEmpty()) {
+                                    categoryTotals
+                                } else {
+                                    categoryCounts.mapValues { it.value.toDouble() }
+                                }
+
+                                CategoryPieChart(categoryTotals = pieChartData)
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                val maxCategoryCount = categoryCounts.values.maxOrNull() ?: 1
+
+                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    categoryCounts.forEach { (category, count) ->
+                                        Column {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(category)
+                                                Text("$count מוצרים")
+                                            }
+
+                                            Spacer(modifier = Modifier.height(4.dp))
+
+                                            LinearProgressIndicator(
+                                                progress = count.toFloat() / maxCategoryCount.toFloat(),
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        item {
+                            SectionCard(title = "רשימות שהושלמו") {
+                                CompletedListsBarChart(lists = filteredLists)
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                filteredLists.forEachIndexed { index, list ->
+                                    StatsRow(
+                                        title = list.selectedStore.ifBlank { "לא נבחר סופר" },
+                                        subtitle = formatTimestamp(list.completedAt),
+                                        value = formatCurrency(list.totalAmount)
+                                    )
+
+                                    if (index != filteredLists.lastIndex) {
+                                        HorizontalDivider(
+                                            modifier = Modifier.padding(vertical = 8.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                if (filteredLists.isEmpty()) {
+                if (isAdmin && selectedTab == 1) {
                     item {
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            )
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Text(
-                                    text = "אין רשימות בטווח התאריכים שנבחר",
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-
-                                Text(
-                                    text = "כדי לראות סטטיסטיקות, השלם רשימת קניות או הרחב את טווח התאריכים.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-
-                                TextButton(
-                                    onClick = {
-                                        startDate = null
-                                        endDate = null
-                                    }
-                                ) {
-                                    Text("נקה סינון")
-                                }
-                            }
-                        }
+                        CatalogStatsContent(catalogState = catalogState)
                     }
-                } else {
+                }
+
+                if (isAdmin && selectedTab == 2) {
                     item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
-                        ) {
-                            StatsSummaryCard(
-                                title = "סה\"כ",
-                                value = formatCurrency(totalSpent),
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            StatsSummaryCard(
-                                title = "רשימות",
-                                value = totalLists.toString(),
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            StatsSummaryCard(
-                                title = "ממוצע",
-                                value = formatCurrency(averageListAmount),
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-
-                    item {
-                        SectionCard(title = "תובנות מהירות") {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(
-                                    text = "הקטגוריה המובילה שלך היא: $topCategory",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-
-                                highestList?.let { list ->
-                                    Text(
-                                        text = "הרשימה היקרה ביותר הייתה ב-${formatTimestamp(list.completedAt)} בסכום ${formatCurrency(list.totalAmount)}",
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    item {
-                        SectionCard(title = "פילוח לפי סופרים") {
-                            val maxStoreTotal = totalsByStore.values.maxOrNull() ?: 1.0
-
-                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                totalsByStore.forEach { (store, total) ->
-                                    Column {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(store)
-                                            Text(formatCurrency(total))
-                                        }
-
-                                        Spacer(modifier = Modifier.height(4.dp))
-
-                                        LinearProgressIndicator(
-                                            progress = (total / maxStoreTotal).toFloat(),
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    item {
-                        SectionCard(title = "פילוח לפי קטגוריות") {
-                            val pieChartData = if (categoryTotals.isNotEmpty()) {
-                                categoryTotals
-                            } else {
-                                categoryCounts.mapValues { it.value.toDouble() }
-                            }
-
-                            CategoryPieChart(
-                                categoryTotals = pieChartData
-                            )
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            val maxCategoryCount = categoryCounts.values.maxOrNull() ?: 1
-
-                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                categoryCounts.forEach { (category, count) ->
-                                    Column {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(category)
-                                            Text("$count מוצרים")
-                                        }
-
-                                        Spacer(modifier = Modifier.height(4.dp))
-
-                                        LinearProgressIndicator(
-                                            progress = count.toFloat() / maxCategoryCount.toFloat(),
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    item {
-                        SectionCard(title = "רשימות שהושלמו") {
-                            CompletedListsBarChart(
-                                lists = filteredLists
-                            )
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            filteredLists.forEachIndexed { index, list ->
-                                StatsRow(
-                                    title = list.selectedStore.ifBlank { "לא נבחר סופר" },
-                                    subtitle = formatTimestamp(list.completedAt),
-                                    value = formatCurrency(list.totalAmount)
-                                )
-
-                                if (index != filteredLists.lastIndex) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.padding(vertical = 8.dp)
-                                    )
-                                }
-                            }
-                        }
+                        UsersStatsContent()
                     }
                 }
             }
@@ -403,9 +449,7 @@ fun StatsScreen(
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { showStartDatePicker = false }
-                ) {
+                TextButton(onClick = { showStartDatePicker = false }) {
                     Text("ביטול")
                 }
             }
@@ -432,14 +476,147 @@ fun StatsScreen(
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { showEndDatePicker = false }
-                ) {
+                TextButton(onClick = { showEndDatePicker = false }) {
                     Text("ביטול")
                 }
             }
         ) {
             DatePicker(state = datePickerState)
+        }
+    }
+}
+
+@Composable
+private fun CatalogStatsContent(
+    catalogState: UiState<List<ShoppingItem>>
+) {
+    when (val state = catalogState) {
+        UiState.Loading -> CircularProgressIndicator()
+
+        is UiState.Error -> Text(
+            text = state.message,
+            color = MaterialTheme.colorScheme.error
+        )
+
+        is UiState.Success -> {
+            val products = state.data
+
+            val categoryCounts = products
+                .groupBy { it.category.ifBlank { "כללי" } }
+                .mapValues { it.value.size }
+
+            val max = categoryCounts.values.maxOrNull() ?: 1
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                StatsSummaryCard(
+                    title = "סה\"כ מוצרים",
+                    value = products.size.toString()
+                )
+
+                SectionCard(title = "פילוח מוצרים לפי קטגוריה") {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        categoryCounts.entries.forEachIndexed { index, entry ->
+                            val category = entry.key
+                            val count = entry.value
+                            val progress = count.toFloat() / max.toFloat()
+
+                            val color = when (index % 8) {
+                                0 -> androidx.compose.ui.graphics.Color(0xFF4CAF50)
+                                1 -> androidx.compose.ui.graphics.Color(0xFF2196F3)
+                                2 -> androidx.compose.ui.graphics.Color(0xFFFF9800)
+                                3 -> androidx.compose.ui.graphics.Color(0xFF9C27B0)
+                                4 -> androidx.compose.ui.graphics.Color(0xFFE91E63)
+                                5 -> androidx.compose.ui.graphics.Color(0xFF00BCD4)
+                                6 -> androidx.compose.ui.graphics.Color(0xFF8BC34A)
+                                else -> androidx.compose.ui.graphics.Color(0xFFFFC107)
+                            }
+
+                            Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = category,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+
+                                    Text(
+                                        text = "$count מוצרים",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = color
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                LinearProgressIndicator(
+                                    progress = progress,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(8.dp),
+                                    color = color,
+                                    trackColor = color.copy(alpha = 0.18f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+@Composable
+private fun UsersStatsContent() {
+    var usersCount by remember { mutableStateOf(0) }
+    var adminCount by remember { mutableStateOf(0) }
+    var isLoading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        try {
+            val snapshot = FirebaseFirestore.getInstance()
+                .collection("users")
+                .get()
+                .await()
+
+            usersCount = snapshot.documents.size
+            adminCount = snapshot.documents.count { it.getString("role") == "admin" }
+            isLoading = false
+        } catch (e: Exception) {
+            error = "שגיאה בטעינת נתוני משתמשים"
+            isLoading = false
+        }
+    }
+
+    when {
+        isLoading -> CircularProgressIndicator()
+
+        error != null -> Text(
+            text = error ?: "",
+            color = MaterialTheme.colorScheme.error
+        )
+
+        else -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            StatsSummaryCard(
+                title = "סה\"כ משתמשים",
+                value = usersCount.toString()
+            )
+
+            StatsSummaryCard(
+                title = "אדמינים",
+                value = adminCount.toString()
+            )
+
+            StatsSummaryCard(
+                title = "משתמשים רגילים",
+                value = (usersCount - adminCount).toString()
+            )
         }
     }
 }
