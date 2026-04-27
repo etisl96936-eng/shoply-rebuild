@@ -95,12 +95,18 @@ fun NavGraph(activity: Activity) {
                 navController = navController
             )
         }
-        composable(Screen.Stats.route) {
+
+        composable(
+            Screen.Stats.route + "/{isAdmin}",
+            arguments = listOf(navArgument("isAdmin") { type = NavType.BoolType })
+        ) { backStackEntry ->
+
+            val isAdmin = backStackEntry.arguments?.getBoolean("isAdmin") ?: false
+
             StatsScreen(
                 viewModel = shoppingViewModel,
-                onBackClick = {
-                    navController.popBackStack()
-                }
+                isAdmin = isAdmin,
+                onBackClick = { navController.popBackStack() }
             )
         }
 
@@ -109,6 +115,9 @@ fun NavGraph(activity: Activity) {
                 viewModel = shoppingViewModel,
                 onListClick = { completedList ->
                     navController.navigate("completed_list_details/${completedList.id}")
+                },
+                onBackClick = {
+                    navController.popBackStack()
                 }
             )
         }

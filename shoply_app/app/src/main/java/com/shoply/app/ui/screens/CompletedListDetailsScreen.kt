@@ -6,6 +6,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -15,6 +17,7 @@ import com.shoply.app.data.CompletedShoppingList
 import com.shoply.app.data.ShoppingItem
 import com.shoply.app.ui.state.UiState
 import com.shoply.app.viewmodel.ShoppingViewModel
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -63,7 +66,10 @@ fun CompletedListDetailsScreen(
             } else {
                 CompletedListDetailsContent(
                     completedList = completedList,
-                    onBackClick = { navController.popBackStack() }
+                    onBackClick = { navController.popBackStack() },
+                    onCopyClick = {
+                        viewModel.copyCompletedListToActive(completedList)
+                    }
                 )
             }
         }
@@ -74,9 +80,16 @@ fun CompletedListDetailsScreen(
 @Composable
 private fun CompletedListDetailsContent(
     completedList: CompletedShoppingList,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onCopyClick: () -> Unit
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
     Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
+        },
         topBar = {
             TopAppBar(
                 title = { Text("פרטי רשימה") },
@@ -117,6 +130,21 @@ private fun CompletedListDetailsContent(
                         Text("סה״כ: ₪%.2f".format(completedList.totalAmount))
                         Text("מספר מוצרים: ${completedList.items.size}")
                     }
+                }
+            }
+
+            item {
+                Button(
+                    onClick = {
+                        onCopyClick()
+
+                        scope.launch {
+                            snackbarHostState.showSnackbar("הרשימה הועתקה בהצלחה")
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("העתק לרשימה פעילה חדשה")
                 }
             }
 

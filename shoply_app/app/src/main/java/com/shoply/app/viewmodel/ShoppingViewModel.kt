@@ -559,6 +559,41 @@ val catalogUiState: StateFlow<UiState<List<ShoppingItem>>> = flow {
             repository.deleteCompletedList(uid, listId)
         }
     }
+    fun copyCompletedListToActive(completedList: CompletedShoppingList) {
+        val uid = currentUid
+        if (uid.isBlank()) return
+
+        viewModelScope.launch {
+            try {
+                // יצירת רשימה חדשה
+                val newListResult = repository.createShoppingList(
+                    uid,
+                    "${completedList.name} - עותק"
+                )
+
+                newListResult.onSuccess { newListId ->
+
+                    // הוספת כל הפריטים לרשימה החדשה
+                    completedList.items.forEach { item ->
+                        repository.addCatalogItemToShoppingList(
+                            uid = uid,
+                            listId = newListId,
+                            catalogItem = item.copy(
+                                id = "",          // יתחדש אוטומטית
+                                isChecked = false // לא מסומן
+                            ),
+                            quantity = item.quantity
+                        )
+                    }
+
+                    loadActiveShoppingLists()
+                }
+
+            } catch (e: Exception) {
+                // אפשר להוסיף גם UiState.Error אם בא לך
+            }
+        }
+    }
 
     fun calculateTotalPerStore(
         items: List<ShoppingItem>,

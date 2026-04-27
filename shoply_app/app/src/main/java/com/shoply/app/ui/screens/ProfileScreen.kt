@@ -37,6 +37,10 @@ import com.shoply.app.ui.theme.ShoplySpacing
 import com.shoply.app.ui.theme.rememberShoplyWindowSize
 import com.shoply.app.viewmodel.AuthViewModel
 import com.shoply.app.viewmodel.ProfileViewModel
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,8 +83,11 @@ fun ProfileScreen(
             TopAppBar(
                 title = { Text("פרופיל משתמש") },
                 navigationIcon = {
-                    TextButton(onClick = { navController.popBackStack() }) {
-                        Text("חזרה")
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowForward,
+                            contentDescription = "חזרה"
+                        )
                     }
                 }
             )
