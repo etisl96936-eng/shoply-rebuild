@@ -28,15 +28,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.shoply.app.data.ALL_API_STORES
 import com.shoply.app.ui.components.ShoplyButton
 import com.shoply.app.ui.components.ShoplyButtonSize
 import com.shoply.app.ui.components.ShoplyTextField
+import com.shoply.app.ui.notifications.NotificationViewModel
 import com.shoply.app.ui.theme.ShoplyResponsive
 import com.shoply.app.ui.theme.ShoplySpacing
 import com.shoply.app.ui.theme.rememberShoplyWindowSize
 import com.shoply.app.viewmodel.AuthViewModel
 import com.shoply.app.viewmodel.ProfileViewModel
-import com.shoply.app.data.ALL_API_STORES
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,8 +49,8 @@ fun ProfileScreen(
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val notificationViewModel: NotificationViewModel = viewModel()
 
-    // אבן דרך 4.3 - Responsive Design
     val windowSize = rememberShoplyWindowSize(activity)
     val maxWidth = ShoplyResponsive.maxContentWidth(windowSize)
 
@@ -155,6 +156,20 @@ fun ProfileScreen(
                         enabled = !state.isSaving,
                         size = ShoplyButtonSize.Large
                     )
+
+                    TextButton(
+                        onClick = {
+                            notificationViewModel.sendTestNotification()
+                            Toast.makeText(
+                                context,
+                                "התראת בדיקה נשלחה",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("🔔 שלח התראת בדיקה")
+                    }
                 }
             }
         }
