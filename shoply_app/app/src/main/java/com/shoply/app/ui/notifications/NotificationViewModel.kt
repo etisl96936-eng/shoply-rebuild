@@ -55,6 +55,19 @@ class NotificationViewModel(
     fun markAsRead(notificationId: String) {
         val currentUserId = auth.currentUser?.uid ?: return
 
+        val currentState = _notificationsUiState.value
+        if (currentState is UiState.Success) {
+            _notificationsUiState.value = UiState.Success(
+                currentState.data.map { notification ->
+                    if (notification.id == notificationId) {
+                        notification.copy(read = true)
+                    } else {
+                        notification
+                    }
+                }
+            )
+        }
+
         viewModelScope.launch {
             repository.markAsRead(
                 userId = currentUserId,

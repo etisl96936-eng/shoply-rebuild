@@ -12,11 +12,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -36,6 +36,7 @@ import com.shoply.app.ui.state.UiState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.runtime.DisposableEffect
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,7 +93,21 @@ fun NotificationsScreen(
             }
 
             is UiState.Success -> {
-                if (state.data.isEmpty()) {
+                val displayedNotifications = state.data
+
+                DisposableEffect(Unit) {
+                    onDispose {
+                        if (state is UiState.Success) {
+                            state.data
+                                .filter { !it.read }
+                                .forEach { notification ->
+                                    viewModel.markAsRead(notification.id)
+                                }
+                        }
+                    }
+                }
+
+                if (displayedNotifications.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -112,13 +127,11 @@ fun NotificationsScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(state.data, key = { it.id }) { notification ->
+                        items(displayedNotifications, key = { it.id }) { notification ->
                             NotificationCard(
                                 notification = notification,
                                 onClick = {
-                                    if (!notification.isRead) {
-                                        viewModel.markAsRead(notification.id)
-                                    }
+                                    // ההתראות יסומנו כנקראות בעת יציאה מהמסך
                                 }
                             )
                         }
@@ -138,7 +151,7 @@ private fun NotificationCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.elevatedCardColors(
-            containerColor = if (notification.isRead) {
+            containerColor = if (notification.read) {
                 MaterialTheme.colorScheme.surface
             } else {
                 MaterialTheme.colorScheme.primaryContainer
@@ -152,7 +165,7 @@ private fun NotificationCard(
             Text(
                 text = notification.title,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = if (notification.isRead) FontWeight.Normal else FontWeight.Bold
+                fontWeight = if (notification.read) FontWeight.Normal else FontWeight.Bold
             )
 
             Text(

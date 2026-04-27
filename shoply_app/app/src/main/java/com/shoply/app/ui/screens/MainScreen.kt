@@ -87,7 +87,7 @@ fun MainScreen(
     val notificationsState by notificationViewModel.notificationsUiState.collectAsStateWithLifecycle()
 
     val unreadNotificationsCount = when (val state = notificationsState) {
-        is UiState.Success -> state.data.count { !it.isRead }
+        is UiState.Success -> state.data.count { !it.read }
         else -> 0
     }
 
@@ -116,6 +116,9 @@ fun MainScreen(
     LaunchedEffect(Unit) {
         viewModel.loadActiveShoppingLists()
         viewModel.loadComparisonStores()
+        notificationViewModel.loadNotifications()
+    }
+    LaunchedEffect(navController.currentBackStackEntry) {
         notificationViewModel.loadNotifications()
     }
 
