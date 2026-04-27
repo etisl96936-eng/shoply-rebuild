@@ -18,7 +18,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import com.shoply.app.data.StorePrice
 import kotlinx.coroutines.tasks.await
-
+import com.shoply.app.network.RetrofitClient
+import kotlinx.coroutines.flow.flow
 
 class ShoppingViewModel : ViewModel() {
     private val repository = ShoppingRepository()
@@ -46,19 +47,22 @@ class ShoppingViewModel : ViewModel() {
     // Catalog
     // =========================
 
-    val catalogUiState: StateFlow<UiState<List<ShoppingItem>>> = repository.getItemsFlow()
-        .map { items ->
-            UiState.Success(items) as UiState<List<ShoppingItem>>
-        }
-        .catch { e ->
-            emit(UiState.Error(e.message ?: "שגיאה לא ידועה"))
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = UiState.Loading
-        )
-
+// טוען את המוצרים מה-API החיצוני (במקום מ-Firebase)
+val catalogUiState: StateFlow<UiState<List<ShoppingItem>>> = flow {
+    try {
+        android.util.Log.d("API_TEST", "מתחבר ל-API...")
+        val products = RetrofitClient.api.getProducts()
+        android.util.Log.d("API_TEST", "קיבלתי ${products.size} מוצרים מה-API")
+        emit(UiState.Success(products) as UiState<List<ShoppingItem>>)
+    } catch (e: Exception) {
+        android.util.Log.e("API_TEST", "שגיאה: ${e.message}", e)
+        emit(UiState.Error("שגיאה בחיבור ל-API: ${e.message}"))
+    }
+}.stateIn(
+    scope = viewModelScope,
+    started = SharingStarted.WhileSubscribed(5000),
+    initialValue = UiState.Loading
+)
     // =========================
     // Shopping list - מבנה ישן
     // =========================
@@ -635,3 +639,4 @@ class ShoppingViewModel : ViewModel() {
 
     fun getCurrentUserId(): String = currentUid
 }
+
