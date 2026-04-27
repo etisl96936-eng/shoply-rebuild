@@ -16,5 +16,9 @@ val DEFAULT_COMPARISON_STORES = listOf(
 )
 
 fun getComparisonStores(preferredStores: List<String>): List<String> {
-    return if (preferredStores.size == 3) preferredStores else DEFAULT_COMPARISON_STORES
+    return if (preferredStores.isEmpty()) {
+        DEFAULT_COMPARISON_STORES
+    } else {
+        preferredStores.take(3)
+    }
 }
