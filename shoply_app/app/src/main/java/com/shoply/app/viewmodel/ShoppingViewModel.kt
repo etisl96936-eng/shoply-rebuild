@@ -149,7 +149,7 @@ val catalogUiState: StateFlow<UiState<List<ShoppingItem>>> = flow {
     val shoppingListItemsActionState: StateFlow<UiState<String>?> = _shoppingListItemsActionState
 
     fun loadActiveShoppingLists() {
-        val uid = _currentShoppingListOwnerUid.value ?: currentUid
+        val uid = currentUid
         if (uid.isBlank()) {
             _shoppingListsUiState.value = UiState.Error("לא נמצא משתמש מחובר")
             return
@@ -167,7 +167,7 @@ val catalogUiState: StateFlow<UiState<List<ShoppingItem>>> = flow {
     }
 
     fun createShoppingList(name: String) {
-        val uid = _currentShoppingListOwnerUid.value ?: currentUid
+        val uid = currentUid
         if (uid.isBlank()) {
             _shoppingListActionState.value = UiState.Error("לא נמצא משתמש מחובר")
             return

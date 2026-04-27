@@ -166,7 +166,7 @@ fun MyShoppingListScreen(
                         val currentUserId = viewModel.getCurrentUserId()
 
                         val myLists = state.data.filter { list ->
-                            list.ownerUid == currentUserId || !list.sharedWith.contains(currentUserId)
+                            list.ownerUid == currentUserId
                         }
 
                         val sharedLists = state.data.filter { list ->
