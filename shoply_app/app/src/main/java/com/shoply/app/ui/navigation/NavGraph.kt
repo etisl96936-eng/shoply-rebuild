@@ -21,6 +21,7 @@ import com.shoply.app.ui.screens.StatsScreen
 import com.shoply.app.viewmodel.AuthViewModel
 import com.shoply.app.viewmodel.ShoppingViewModel
 import com.shoply.app.ui.screens.CompletedListDetailsScreen
+import com.shoply.app.ui.notifications.NotificationsScreen
 
 
 
@@ -88,7 +89,11 @@ fun NavGraph(activity: Activity) {
                 activity = activity
             )
         }
-
+        composable("notifications") {
+            NotificationsScreen(
+                navController = navController
+            )
+        }
         composable(Screen.Stats.route) {
             StatsScreen(
                 viewModel = shoppingViewModel,
