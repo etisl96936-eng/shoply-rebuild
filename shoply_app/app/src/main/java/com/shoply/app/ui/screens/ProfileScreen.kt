@@ -12,13 +12,13 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,7 +32,6 @@ import com.shoply.app.data.ALL_API_STORES
 import com.shoply.app.ui.components.ShoplyButton
 import com.shoply.app.ui.components.ShoplyButtonSize
 import com.shoply.app.ui.components.ShoplyTextField
-import com.shoply.app.ui.notifications.NotificationViewModel
 import com.shoply.app.ui.theme.ShoplyResponsive
 import com.shoply.app.ui.theme.ShoplySpacing
 import com.shoply.app.ui.theme.rememberShoplyWindowSize
@@ -49,7 +48,6 @@ fun ProfileScreen(
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val notificationViewModel: NotificationViewModel = viewModel()
 
     val windowSize = rememberShoplyWindowSize(activity)
     val maxWidth = ShoplyResponsive.maxContentWidth(windowSize)
@@ -156,20 +154,6 @@ fun ProfileScreen(
                         enabled = !state.isSaving,
                         size = ShoplyButtonSize.Large
                     )
-
-                    TextButton(
-                        onClick = {
-                            notificationViewModel.sendTestNotification()
-                            Toast.makeText(
-                                context,
-                                "התראת בדיקה נשלחה",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("🔔 שלח התראת בדיקה")
-                    }
                 }
             }
         }

@@ -1,6 +1,7 @@
 package com.shoply.app.ui.screens
 
 import android.app.Activity
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,11 +46,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.shoply.app.data.ProductUiModel
 import com.shoply.app.data.ShoppingItem
 import com.shoply.app.data.ShoppingList
-import com.shoply.app.data.StorePrice
 import com.shoply.app.ui.components.ErrorView
 import com.shoply.app.ui.components.LoadingView
 import com.shoply.app.ui.components.ProductPriceCard
@@ -57,6 +58,8 @@ import com.shoply.app.ui.components.ShoplyAlertDialog
 import com.shoply.app.ui.components.ShoplyButton
 import com.shoply.app.ui.components.ShoplyTextField
 import com.shoply.app.ui.navigation.Screen
+import com.shoply.app.ui.notifications.NotificationViewModel
+import com.shoply.app.ui.notifications.NotificationsBell
 import com.shoply.app.ui.state.UiState
 import com.shoply.app.ui.theme.ShoplyResponsive
 import com.shoply.app.ui.theme.ShoplySpacing
@@ -79,6 +82,14 @@ fun MainScreen(
     val shoppingListsState by viewModel.shoppingListsUiState.collectAsStateWithLifecycle()
     val activeListItemsState by viewModel.shoppingListItemsUiState.collectAsStateWithLifecycle()
     val comparisonStores by viewModel.comparisonStores.collectAsStateWithLifecycle()
+
+    val notificationViewModel: NotificationViewModel = viewModel()
+    val notificationsState by notificationViewModel.notificationsUiState.collectAsStateWithLifecycle()
+
+    val unreadNotificationsCount = when (val state = notificationsState) {
+        is UiState.Success -> state.data.count { !it.isRead }
+        else -> 0
+    }
 
     val windowSize = rememberShoplyWindowSize(activity)
     val gridColumns = ShoplyResponsive.gridColumns(windowSize)
@@ -105,6 +116,7 @@ fun MainScreen(
     LaunchedEffect(Unit) {
         viewModel.loadActiveShoppingLists()
         viewModel.loadComparisonStores()
+        notificationViewModel.loadNotifications()
     }
 
     LaunchedEffect(activeListId) {
@@ -185,6 +197,13 @@ fun MainScreen(
                         Text(title)
                     },
                     actions = {
+                        NotificationsBell(
+                            unreadCount = unreadNotificationsCount,
+                            onClick = {
+                                navController.navigate("notifications")
+                            }
+                        )
+
                         IconButton(onClick = { navController.navigate(Screen.MyLists.route) }) {
                             Icon(
                                 imageVector = Icons.Default.List,
@@ -468,6 +487,7 @@ fun MainScreen(
         }
     }
 }
+
 @Composable
 private fun ActiveListHeader(
     shoppingListsState: UiState<List<ShoppingList>>,
@@ -620,6 +640,7 @@ private fun ActiveListHeader(
         }
     }
 }
+
 @Composable
 private fun ChooseActiveListDialog(
     shoppingListsState: UiState<List<ShoppingList>>,
