@@ -20,10 +20,17 @@ import com.shoply.app.data.StorePrice
 import kotlinx.coroutines.tasks.await
 import com.shoply.app.network.RetrofitClient
 import kotlinx.coroutines.flow.flow
+import com.google.firebase.firestore.FirebaseFirestore
+import com.shoply.app.data.DEFAULT_COMPARISON_STORES
+import com.shoply.app.data.getComparisonStores
 
 class ShoppingViewModel : ViewModel() {
     private val repository = ShoppingRepository()
     private val auth = FirebaseAuth.getInstance()
+    private val firestore = FirebaseFirestore.getInstance()
+
+    private val _comparisonStores = MutableStateFlow(DEFAULT_COMPARISON_STORES)
+    val comparisonStores: StateFlow<List<String>> = _comparisonStores
 
     private val currentUidFlow = MutableStateFlow(auth.currentUser?.uid.orEmpty())
 
@@ -638,5 +645,25 @@ val catalogUiState: StateFlow<UiState<List<ShoppingItem>>> = flow {
     }
 
     fun getCurrentUserId(): String = currentUid
+
+    fun loadComparisonStores() {
+        val uid = currentUid
+        if (uid.isBlank()) {
+            _comparisonStores.value = DEFAULT_COMPARISON_STORES
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                val doc = firestore.collection("users").document(uid).get().await()
+                val preferredStores =
+                    (doc.get("preferredStores") as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+
+                _comparisonStores.value = getComparisonStores(preferredStores)
+            } catch (e: Exception) {
+                _comparisonStores.value = DEFAULT_COMPARISON_STORES
+            }
+        }
+    }
 }
 

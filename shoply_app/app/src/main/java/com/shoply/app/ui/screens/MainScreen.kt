@@ -78,6 +78,7 @@ fun MainScreen(
     val catalogState by viewModel.catalogUiState.collectAsStateWithLifecycle()
     val shoppingListsState by viewModel.shoppingListsUiState.collectAsStateWithLifecycle()
     val activeListItemsState by viewModel.shoppingListItemsUiState.collectAsStateWithLifecycle()
+    val comparisonStores by viewModel.comparisonStores.collectAsStateWithLifecycle()
 
     val windowSize = rememberShoplyWindowSize(activity)
     val gridColumns = ShoplyResponsive.gridColumns(windowSize)
@@ -103,6 +104,7 @@ fun MainScreen(
 
     LaunchedEffect(Unit) {
         viewModel.loadActiveShoppingLists()
+        viewModel.loadComparisonStores()
     }
 
     LaunchedEffect(activeListId) {
@@ -328,7 +330,8 @@ fun MainScreen(
                                     items(filteredItems, key = { it.id }) { item ->
                                         ProductPriceCard(
                                             product = item.toProductUiModel(
-                                                isInMyList = activeListItemIds.contains(item.id)
+                                                isInMyList = activeListItemIds.contains(item.id),
+                                                comparisonStores = comparisonStores
                                             ),
                                             isAdmin = isAdmin,
                                             onToggleInList = {
@@ -354,7 +357,8 @@ fun MainScreen(
                                     items(filteredItems, key = { it.id }) { item ->
                                         ProductPriceCard(
                                             product = item.toProductUiModel(
-                                                isInMyList = activeListItemIds.contains(item.id)
+                                                isInMyList = activeListItemIds.contains(item.id),
+                                                comparisonStores = comparisonStores
                                             ),
                                             isAdmin = isAdmin,
                                             onToggleInList = {
@@ -831,36 +835,16 @@ private fun DrawerItem(
     )
 }
 
-private fun ShoppingItem.toProductUiModel(isInMyList: Boolean): ProductUiModel {
-    val mockPrices = when (title) {
-        "חלב 3%" -> listOf(
-            StorePrice("שופרסל", 7.20),
-            StorePrice("רמי לוי", 6.90),
-            StorePrice("ויקטורי", 7.50)
-        )
-        "לחם פרוס" -> listOf(
-            StorePrice("שופרסל", 6.50),
-            StorePrice("רמי לוי", 6.90),
-            StorePrice("ויקטורי", 7.20)
-        )
-        "כפות" -> listOf(
-            StorePrice("שופרסל", 12.90),
-            StorePrice("רמי לוי", 11.50),
-            StorePrice("ויקטורי", 13.20)
-        )
-        else -> listOf(
-            StorePrice("שופרסל", 9.90),
-            StorePrice("רמי לוי", 8.70),
-            StorePrice("ויקטורי", 10.20)
-        )
-    }
-
+private fun ShoppingItem.toProductUiModel(
+    isInMyList: Boolean,
+    comparisonStores: List<String>
+): ProductUiModel {
     return ProductUiModel(
         id = id,
         title = title,
         category = category,
         quantityLabel = quantity,
-        storePrices = if (storePrices.isNotEmpty()) storePrices else mockPrices,
+        storePrices = storePrices.filter { it.storeName in comparisonStores },
         isInMyList = isInMyList
     )
 }

@@ -36,6 +36,7 @@ import com.shoply.app.ui.theme.ShoplySpacing
 import com.shoply.app.ui.theme.rememberShoplyWindowSize
 import com.shoply.app.viewmodel.AuthViewModel
 import com.shoply.app.viewmodel.ProfileViewModel
+import com.shoply.app.data.ALL_API_STORES
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,14 +53,7 @@ fun ProfileScreen(
     val windowSize = rememberShoplyWindowSize(activity)
     val maxWidth = ShoplyResponsive.maxContentWidth(windowSize)
 
-    val stores = listOf(
-        "שופרסל",
-        "רמי לוי",
-        "ויקטורי",
-        "יוחננוף",
-        "קרפור",
-        "טיב טעם"
-    )
+    val stores = ALL_API_STORES
 
     LaunchedEffect(Unit) {
         viewModel.loadProfile()
