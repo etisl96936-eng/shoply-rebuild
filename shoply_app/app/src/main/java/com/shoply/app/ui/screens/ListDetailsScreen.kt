@@ -31,7 +31,7 @@ fun ListDetailsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val actionState by viewModel.shoppingListActionState.collectAsState()
-    var newItemName by remember { mutableStateOf("") }
+    var searchQuery by remember { mutableStateOf("") }
     var newItemQuantity by remember { mutableStateOf("1") }
     var showSelectStoreDialog by remember { mutableStateOf(false) }
 
@@ -62,6 +62,26 @@ fun ListDetailsScreen(
     }
 
     val items = (itemsState as? UiState.Success)?.data ?: emptyList()
+    val filteredItems = if (searchQuery.isBlank()) {
+        items
+    } else {
+        val query = searchQuery.trim()
+
+        val startsWithMatches = items.filter { item ->
+            item.title.startsWith(query, ignoreCase = true)
+        }
+
+        val containsMatches = items.filter { item ->
+            !item.title.startsWith(query, ignoreCase = true) &&
+                    (
+                            item.title.contains(query, ignoreCase = true) ||
+                                    item.category.contains(query, ignoreCase = true)
+                            )
+        }
+
+        startsWithMatches + containsMatches
+    }
+
     val stores = listOf("שופרסל", "רמי לוי", "ויקטורי")
 
     val totals = stores.associateWith { store ->
@@ -219,39 +239,12 @@ fun ListDetailsScreen(
 
             item {
                 OutlinedTextField(
-                    value = newItemName,
-                    onValueChange = { newItemName = it },
-                    label = { Text("שם פריט") },
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("חיפוש פריט ברשימה") },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-            }
-
-            item {
-                OutlinedTextField(
-                    value = newItemQuantity,
-                    onValueChange = { newItemQuantity = it.filter { char -> char.isDigit() } },
-                    label = { Text("כמות") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            item {
-                Button(
-                    onClick = {
-                        if (newItemName.isNotBlank()) {
-                            viewModel.addItemToCurrentShoppingList(
-                                listId = listId,
-                                itemName = newItemName,
-                                quantity = if (newItemQuantity.isBlank()) "1" else newItemQuantity
-                            )
-                            newItemName = ""
-                            newItemQuantity = "1"
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("הוסף פריט")
-                }
             }
 
             when (val state = itemsState) {
@@ -272,7 +265,7 @@ fun ListDetailsScreen(
                     if (state.data.isEmpty()) {
                         item { Text("אין עדיין פריטים ברשימה") }
                     } else {
-                        items(state.data, key = { it.id }) { item ->
+                        items(filteredItems, key = { it.id }) { item ->
                             ShoppingListItemRow(
                                 item = item,
                                 onCheckedChange = {
