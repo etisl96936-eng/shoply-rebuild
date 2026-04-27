@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
@@ -20,6 +19,8 @@ import com.shoply.app.data.StorePrice
 import com.shoply.app.ui.state.UiState
 import com.shoply.app.viewmodel.ShoppingViewModel
 import kotlinx.coroutines.launch
+import androidx.compose.material.icons.filled.ArrowForward
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -158,7 +159,10 @@ fun ListDetailsScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "חזרה")
+                        Icon(
+                            imageVector = Icons.Filled.ArrowForward,
+                            contentDescription = "חזרה"
+                        )
                     }
                 },
                 actions = {
