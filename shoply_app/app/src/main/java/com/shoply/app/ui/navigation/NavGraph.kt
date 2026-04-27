@@ -115,6 +115,9 @@ fun NavGraph(activity: Activity) {
                 viewModel = shoppingViewModel,
                 onListClick = { completedList ->
                     navController.navigate("completed_list_details/${completedList.id}")
+                },
+                onBackClick = {
+                    navController.popBackStack()
                 }
             )
         }

@@ -61,6 +61,10 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -154,11 +158,15 @@ fun StatsScreen(
             ) {
                 item {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        TextButton(onClick = onBackClick) {
-                            Text("חזרה")
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowForward,
+                                contentDescription = "חזרה"
+                            )
                         }
 
                         Spacer(modifier = Modifier.width(8.dp))
@@ -167,6 +175,7 @@ fun StatsScreen(
                             text = "סטטיסטיקות",
                             style = MaterialTheme.typography.headlineSmall
                         )
+
                     }
                 }
 

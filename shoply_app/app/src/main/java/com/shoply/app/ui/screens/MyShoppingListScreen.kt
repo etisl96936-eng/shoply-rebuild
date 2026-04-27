@@ -16,8 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
@@ -56,6 +55,7 @@ import com.shoply.app.viewmodel.ShoppingViewModel
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.Delete
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -105,7 +105,7 @@ fun MyShoppingListScreen(
                         onClick = { navController.popBackStack() }
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.Default.ArrowForward,
                             contentDescription = "חזרה"
                         )
                     }

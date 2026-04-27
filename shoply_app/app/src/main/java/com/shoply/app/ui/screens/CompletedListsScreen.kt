@@ -40,12 +40,19 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import androidx.compose.material.icons.Icons
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Scaffold
+import androidx.compose.material.icons.filled.ArrowForward
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompletedListsScreen(
     viewModel: ShoppingViewModel,
-    onListClick: ((CompletedShoppingList) -> Unit)? = null
+    onListClick: ((CompletedShoppingList) -> Unit)? = null,
+    onBackClick: () -> Unit = {}
 ) {
     val completedListsState by viewModel.completedListsUiState.collectAsStateWithLifecycle()
 
@@ -57,162 +64,138 @@ fun CompletedListsScreen(
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
 
-    when (val state = completedListsState) {
-        is UiState.Loading -> {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                CircularProgressIndicator()
-            }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("ארכיון רשימות") },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowForward,
+                            contentDescription = "חזרה"
+                        )
+                    }
+                }
+            )
         }
-
-        is UiState.Error -> {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = state.message,
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            }
-        }
-
-        is UiState.Success -> {
-            val completedLists = state.data.sortedByDescending { it.completedAt }
-
-            val startBoundary = startDate?.let { pickerUtcMillisToLocalStartOfDay(it) }
-            val endBoundary = endDate?.let { pickerUtcMillisToLocalEndOfDay(it) }
-
-            val filteredLists = completedLists.filter { list ->
-                val afterStart = startBoundary?.let { list.completedAt >= it } ?: true
-                val beforeEnd = endBoundary?.let { list.completedAt <= it } ?: true
-                afterStart && beforeEnd
+    ) { padding ->
+        when (val state = completedListsState) {
+            is UiState.Loading -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator()
+                }
             }
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(ShoplySpacing.medium),
-                verticalArrangement = Arrangement.spacedBy(ShoplySpacing.medium)
-            ) {
-                item {
+            is UiState.Error -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
-                        text = "ארכיון רשימות",
-                        style = MaterialTheme.typography.headlineSmall
+                        text = state.message,
+                        style = MaterialTheme.typography.bodyLarge
                     )
                 }
+            }
 
-                item {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Text(
-                                text = "טווח תאריכים",
-                                style = MaterialTheme.typography.titleMedium
-                            )
+            is UiState.Success -> {
+                val completedLists = state.data.sortedByDescending { it.completedAt }
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
-                            ) {
-                                OutlinedButton(
-                                    onClick = { showStartDatePicker = true },
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(startDate?.let { formatCompletedDate(it) } ?: "מתאריך")
-                                }
+                val startBoundary = startDate?.let { pickerUtcMillisToLocalStartOfDay(it) }
+                val endBoundary = endDate?.let { pickerUtcMillisToLocalEndOfDay(it) }
 
-                                OutlinedButton(
-                                    onClick = { showEndDatePicker = true },
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(endDate?.let { formatCompletedDate(it) } ?: "עד תאריך")
-                                }
-                            }
-
-                            if (startDate != null || endDate != null) {
-                                TextButton(
-                                    onClick = {
-                                        startDate = null
-                                        endDate = null
-                                    }
-                                ) {
-                                    Text("נקה סינון")
-                                }
-                            }
-                        }
-                    }
+                val filteredLists = completedLists.filter { list ->
+                    val afterStart = startBoundary?.let { list.completedAt >= it } ?: true
+                    val beforeEnd = endBoundary?.let { list.completedAt <= it } ?: true
+                    afterStart && beforeEnd
                 }
 
-                if (completedLists.isEmpty()) {
-                    item {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "אין עדיין רשימות שהושלמו",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                        }
-                    }
-                } else if (filteredLists.isEmpty()) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentPadding = PaddingValues(ShoplySpacing.medium),
+                    verticalArrangement = Arrangement.spacedBy(ShoplySpacing.medium)
+                ) {
                     item {
                         Card(
                             colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                containerColor = MaterialTheme.colorScheme.surface
                             )
                         ) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
+                                    .padding(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 Text(
-                                    text = "אין רשימות בטווח התאריכים שנבחר",
-                                    style = MaterialTheme.typography.bodyLarge
+                                    text = "טווח תאריכים",
+                                    style = MaterialTheme.typography.titleMedium
                                 )
 
-                                TextButton(
-                                    onClick = {
-                                        startDate = null
-                                        endDate = null
-                                    }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
                                 ) {
-                                    Text("נקה סינון")
+                                    OutlinedButton(
+                                        onClick = { showStartDatePicker = true },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(startDate?.let { formatCompletedDate(it) } ?: "מתאריך")
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = { showEndDatePicker = true },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(endDate?.let { formatCompletedDate(it) } ?: "עד תאריך")
+                                    }
+                                }
+
+                                if (startDate != null || endDate != null) {
+                                    TextButton(
+                                        onClick = {
+                                            startDate = null
+                                            endDate = null
+                                        }
+                                    ) {
+                                        Text("נקה סינון")
+                                    }
                                 }
                             }
                         }
                     }
-                } else {
-                    items(filteredLists, key = { it.id }) { completedList ->
-                        CompletedListCard(
-                            completedList = completedList,
-                            onClick = {
-                                onListClick?.invoke(completedList)
-                            },
-                            onLongClick = {
-                                selectedList = completedList
-                                showDeleteDialog = true
-                            }
-                        )
+
+                    if (completedLists.isEmpty()) {
+                        item {
+                            Text("אין עדיין רשימות שהושלמו")
+                        }
+                    } else if (filteredLists.isEmpty()) {
+                        item {
+                            Text("אין רשימות בטווח התאריכים שנבחר")
+                        }
+                    } else {
+                        items(filteredLists, key = { it.id }) { completedList ->
+                            CompletedListCard(
+                                completedList = completedList,
+                                onClick = { onListClick?.invoke(completedList) },
+                                onLongClick = {
+                                    selectedList = completedList
+                                    showDeleteDialog = true
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -225,12 +208,8 @@ fun CompletedListsScreen(
                 showDeleteDialog = false
                 selectedList = null
             },
-            title = {
-                Text("מחיקת רשימה")
-            },
-            text = {
-                Text("האם הנך מעוניין להסיר את הרשימה מ-Shoply?")
-            },
+            title = { Text("מחיקת רשימה") },
+            text = { Text("האם הנך מעוניין להסיר את הרשימה מ-Shoply?") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -256,9 +235,7 @@ fun CompletedListsScreen(
     }
 
     if (showStartDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = startDate
-        )
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = startDate)
 
         DatePickerDialog(
             onDismissRequest = { showStartDatePicker = false },
@@ -273,9 +250,7 @@ fun CompletedListsScreen(
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { showStartDatePicker = false }
-                ) {
+                TextButton(onClick = { showStartDatePicker = false }) {
                     Text("ביטול")
                 }
             }
@@ -285,9 +260,7 @@ fun CompletedListsScreen(
     }
 
     if (showEndDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = endDate
-        )
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = endDate)
 
         DatePickerDialog(
             onDismissRequest = { showEndDatePicker = false },
@@ -302,9 +275,7 @@ fun CompletedListsScreen(
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { showEndDatePicker = false }
-                ) {
+                TextButton(onClick = { showEndDatePicker = false }) {
                     Text("ביטול")
                 }
             }
@@ -381,11 +352,7 @@ private fun CompletedListCard(
                 style = MaterialTheme.typography.bodyMedium
             )
 
-            Text(
-                text = "לחץ לצפייה בפרטי הרשימה",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+
         }
     }
 }
