@@ -40,7 +40,7 @@ fun AdminUsersScreen(
                     uid = doc.id,
                     displayName = doc.getString("displayName") ?: "",
                     email = doc.getString("email") ?: "",
-                    isAdmin = doc.getBoolean("isAdmin") ?: false
+                    isAdmin = doc.getString("role") == "admin"
                 )
             }
 
@@ -101,7 +101,7 @@ fun AdminUsersScreen(
                             onAdminChanged = { checked ->
                                 db.collection("users")
                                     .document(user.uid)
-                                    .update("isAdmin", checked)
+                                    .update("role", if (checked) "admin" else "user")
 
                                 users = users.map {
                                     if (it.uid == user.uid) it.copy(isAdmin = checked) else it

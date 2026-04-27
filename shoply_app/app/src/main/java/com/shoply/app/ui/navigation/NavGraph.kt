@@ -10,6 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.shoply.app.ui.screens.AdminUsersScreen
 import com.shoply.app.ui.screens.CompletedListsScreen
 import com.shoply.app.ui.screens.ListDetailsScreen
 import com.shoply.app.ui.screens.LoginScreen
@@ -159,6 +160,10 @@ fun NavGraph(activity: Activity) {
                 navController = navController,
                 viewModel = shoppingViewModel
             )
+        }
+
+        composable("admin_users") {
+            AdminUsersScreen(navController = navController)
         }
     }
 }

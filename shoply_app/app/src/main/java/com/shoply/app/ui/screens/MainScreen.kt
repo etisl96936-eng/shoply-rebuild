@@ -163,6 +163,12 @@ fun MainScreen(
                         // TODO: מסך הגדרות
                     }
                 },
+
+                onAdminUsersClick = {
+                    closeDrawerAnd {
+                        navController.navigate("admin_users")
+                    }
+                },
                 onLogoutClick = {
                     closeDrawerAnd { showLogoutDialog = true }
                 }
@@ -749,6 +755,7 @@ private fun ShoplyDrawerContent(
     onMyListsClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onLogoutClick: () -> Unit,
+    onAdminUsersClick: () -> Unit,
 ) {
     ModalDrawerSheet {
         Column(
@@ -837,6 +844,14 @@ private fun ShoplyDrawerContent(
                 label = "התנתקות",
                 onClick = onLogoutClick
             )
+
+            if (isAdmin) {
+                DrawerItem(
+                    icon = Icons.Default.Person,
+                    label = "ניהול משתמשים",
+                    onClick = onAdminUsersClick
+                )
+            }
         }
     }
 }
