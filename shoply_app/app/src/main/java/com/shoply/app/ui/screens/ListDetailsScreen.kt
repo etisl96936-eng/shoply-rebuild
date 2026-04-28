@@ -273,6 +273,7 @@ fun ListDetailsScreen(
                         items(filteredItems, key = { it.id }) { item ->
                             ShoppingListItemRow(
                                 item = item,
+                                stores = stores,
                                 onCheckedChange = {
                                     val uncheckedItems = items.filter { !it.isChecked }
                                     val isLastUncheckedItem =
@@ -356,6 +357,7 @@ fun ListDetailsScreen(
 @Composable
 private fun ShoppingListItemRow(
     item: ShoppingItem,
+    stores: List<String>,
     onCheckedChange: () -> Unit,
     onDelete: () -> Unit,
     onIncreaseQuantity: () -> Unit,
@@ -383,6 +385,44 @@ private fun ShoppingListItemRow(
                 )
 
                 Text(item.category)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    stores.forEach { store ->
+                        val price = item.storePrices
+                            .firstOrNull { it.storeName == store }
+                            ?.price
+
+                        Surface(
+                            modifier = Modifier.weight(1f),
+                            shape = MaterialTheme.shapes.small,
+                            color = MaterialTheme.colorScheme.surface
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(vertical = 6.dp, horizontal = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = store,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1
+                                )
+
+                                Text(
+                                    text = if (price != null) {
+                                        "₪${"%.2f".format(price)}"
+                                    } else {
+                                        "₪0.00"
+                                    },
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        }
+                    }
+                }
+
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
