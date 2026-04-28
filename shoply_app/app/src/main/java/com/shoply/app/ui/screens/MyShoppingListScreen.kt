@@ -505,12 +505,14 @@ private fun ShoppingListCard(
                             }
                         )
 
-                        shoppingList.selectedStore?.let { store ->
-                            AssistChip(
-                                onClick = { },
-                                label = { Text(store) }
-                            )
-                        }
+                        shoppingList.selectedStore
+                            ?.takeIf { it.isNotBlank() }
+                            ?.let { store ->
+                                AssistChip(
+                                    onClick = { },
+                                    label = { Text(store) }
+                                )
+                            }
                     }
                 }
 
