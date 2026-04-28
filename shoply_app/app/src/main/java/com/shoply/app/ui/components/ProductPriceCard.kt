@@ -3,7 +3,6 @@ package com.shoply.app.ui.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -30,6 +29,7 @@ fun ProductPriceCard(
     modifier: Modifier = Modifier
 ) {
     val cheapest = product.storePrices.minByOrNull { it.price }
+
     ShoplyCard(
         modifier = modifier.fillMaxWidth()
     ) {
@@ -80,8 +80,6 @@ fun ProductPriceCard(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     product.storePrices.forEach { priceItem ->
-                        val isCheapest = cheapest?.price == priceItem.price
-
                         StorePriceChip(
                             storeName = priceItem.storeName,
                             price = priceItem.price,
@@ -89,6 +87,13 @@ fun ProductPriceCard(
                         )
                     }
                 }
+            } else {
+                Text(
+                    text = "אין נתוני מחירים זמינים מה־API",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
             }
         }
     }
@@ -99,14 +104,10 @@ private fun ProductPriceCardPreviewContent() {
     ProductPriceCard(
         product = ProductUiModel(
             id = "1",
-            title = "חלב 3%",
-            category = "מוצרי חלב וביצים",
+            title = "מוצר לדוגמה",
+            category = "קטגוריה",
             quantityLabel = "1",
-            storePrices = listOf(
-                com.shoply.app.data.StorePrice("שופרסל", 7.20),
-                com.shoply.app.data.StorePrice("רמי לוי", 6.90),
-                com.shoply.app.data.StorePrice("ויקטורי", 7.50)
-            ),
+            storePrices = emptyList(),
             isInMyList = true
         ),
         isAdmin = true,

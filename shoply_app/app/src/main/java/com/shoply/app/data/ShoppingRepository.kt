@@ -247,15 +247,7 @@ class ShoppingRepository {
         val docRef = shoppingListItemsCollection(uid, listId).document(docId)
         val snapshot = docRef.get().await()
 
-        val pricesToSave = if (catalogItem.storePrices.isNotEmpty()) {
-            catalogItem.storePrices
-        } else {
-            listOf(
-                StorePrice("שופרסל", 7.2),
-                StorePrice("רמי לוי", 6.9),
-                StorePrice("ויקטורי", 7.5)
-            )
-        }
+        val pricesToSave = catalogItem.storePrices
 
         if (snapshot.exists()) {
             val existingItem = snapshot.toObject(ShoppingItem::class.java)

@@ -3,7 +3,7 @@ package com.shoply.app.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shoply.app.data.ShoppingItem
-import com.shoply.app.firestore.ProductRepository
+import com.shoply.app.data.ProductRepository
 import kotlinx.coroutines.launch
 
 class ProductViewModel : ViewModel() {
