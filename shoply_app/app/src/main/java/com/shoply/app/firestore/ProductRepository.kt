@@ -1,26 +1,32 @@
 package com.shoply.app.firestore
 
-import com.google.firebase.firestore.FirebaseFirestore
-import com.shoply.app.data.Product
+import com.shoply.app.data.ShoppingItem
+import com.shoply.app.network.RetrofitClient
 
 class ProductRepository {
 
-    private val db = FirebaseFirestore.getInstance()
-    private val productsRef = db.collection("products")
-
-    fun addProduct(product: Product, onResult: (Boolean) -> Unit) {
-        productsRef.add(product)
-            .addOnSuccessListener { onResult(true) }
-            .addOnFailureListener { onResult(false) }
+    suspend fun getProducts(): List<ShoppingItem> {
+        return RetrofitClient.api.getProducts()
     }
 
-    fun getProducts(onResult: (List<Product>) -> Unit) {
-        productsRef.get()
-            .addOnSuccessListener { result ->
-                val products = result.documents.mapNotNull {
-                    it.toObject(Product::class.java)
-                }
-                onResult(products)
-            }
+    suspend fun getProductsByCategory(category: String): List<ShoppingItem> {
+        return RetrofitClient.api.getProductsByCategory(category)
+    }
+
+    suspend fun searchProducts(search: String): List<ShoppingItem> {
+        return RetrofitClient.api.searchProducts(search)
+    }
+
+    suspend fun getProductById(id: String): ShoppingItem {
+        return RetrofitClient.api.getProductById(id)
+    }
+
+    suspend fun getCategories(): List<String> {
+        return RetrofitClient.api.getCategories()
+    }
+
+    fun addProduct(product: ShoppingItem, onResult: (Boolean) -> Unit) {
+        // מוצרים לא נשמרים ב-Firebase. מקור האמת הוא ה-API.
+        onResult(false)
     }
 }

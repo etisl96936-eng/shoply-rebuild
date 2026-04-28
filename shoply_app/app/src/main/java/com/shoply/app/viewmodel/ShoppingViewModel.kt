@@ -477,20 +477,46 @@ class ShoppingViewModel : ViewModel() {
 
     fun addItem(name: String, quantity: String, description: String, category: String) {
         viewModelScope.launch {
-            val newItem = ShoppingItem(
-                title = name,
-                quantity = quantity,
-                description = description,
-                category = category,
-                timestamp = System.currentTimeMillis(),
+            try {
+                val apiProducts = RetrofitClient.api.searchProducts(name)
 
-                storePrices = listOf(
-                    StorePrice("שופרסל", 7.2),
-                    StorePrice("רמי לוי", 6.9),
-                    StorePrice("ויקטורי", 7.5)
+                val matchedProduct = apiProducts.firstOrNull {
+                    it.title.equals(name, ignoreCase = true)
+                } ?: apiProducts.firstOrNull()
+
+                val newItem = ShoppingItem(
+                    title = name,
+                    quantity = quantity,
+                    description = description.ifBlank {
+                        matchedProduct?.description ?: ""
+                    },
+                    category = category.ifBlank {
+                        matchedProduct?.category ?: ""
+                    },
+                    timestamp = System.currentTimeMillis(),
+
+                    // המחירים מגיעים מה-API בלבד
+                    storePrices = matchedProduct?.storePrices ?: emptyList()
                 )
-            )
-            repository.addItem(newItem)
+
+                repository.addItem(newItem)
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+
+                val newItem = ShoppingItem(
+                    title = name,
+                    quantity = quantity,
+                    description = description,
+                    category = category,
+                    timestamp = System.currentTimeMillis(),
+
+                    // אין מחירים מקומיים במקרה של כשל
+                    storePrices = emptyList()
+                )
+
+                repository.addItem(newItem)
+            }
         }
     }
 
