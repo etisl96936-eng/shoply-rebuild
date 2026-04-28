@@ -40,7 +40,7 @@ fun ErrorView(
         )
         Spacer(modifier = Modifier.height(ShoplySpacing.small))
         Text(
-            text = "שגיאה בחיבור. בדקי את האינטרנט ונסי שוב",
+            text = "שגיאה בחיבור. בדוק את האינטרנט ונסה שוב",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
