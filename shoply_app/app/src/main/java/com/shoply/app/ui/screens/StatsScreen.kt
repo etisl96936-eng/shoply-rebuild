@@ -153,7 +153,12 @@ fun StatsScreen(
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(ShoplySpacing.medium),
+                contentPadding = PaddingValues(
+                    start = ShoplySpacing.medium,
+                    top = ShoplySpacing.medium,
+                    end = ShoplySpacing.medium,
+                    bottom = 40.dp
+                ),
                 verticalArrangement = Arrangement.spacedBy(ShoplySpacing.medium)
             ) {
                 item {
