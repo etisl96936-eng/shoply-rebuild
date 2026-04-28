@@ -296,7 +296,7 @@ fun ListDetailsScreen(
                                 onDelete = {
                                     viewModel.deleteItemFromCurrentShoppingList(listId, item.id)
                                 },
-                                        onIncreaseQuantity = {
+                                onIncreaseQuantity = {
                                     val current = item.quantity.toIntOrNull()?.coerceAtLeast(1) ?: 1
                                     viewModel.updateItemQuantityInCurrentShoppingList(
                                         listId = listId,

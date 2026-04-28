@@ -5,7 +5,9 @@ import com.google.firebase.auth.FirebaseAuth
 import com.shoply.app.data.CompletedShoppingList
 import com.shoply.app.data.ShoppingItem
 import com.shoply.app.data.ShoppingList
+import com.shoply.app.data.AppNotification
 import com.shoply.app.data.repository.ShoppingRepository
+import com.shoply.app.data.repository.NotificationRepository
 import com.shoply.app.ui.state.UiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,11 +23,13 @@ import kotlinx.coroutines.tasks.await
 import com.shoply.app.network.RetrofitClient
 import kotlinx.coroutines.flow.flow
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FieldValue
 import com.shoply.app.data.DEFAULT_COMPARISON_STORES
 import com.shoply.app.data.getComparisonStores
 
 class ShoppingViewModel : ViewModel() {
     private val repository = ShoppingRepository()
+    private val notificationRepository = NotificationRepository()
     private val auth = FirebaseAuth.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
 
@@ -54,22 +58,22 @@ class ShoppingViewModel : ViewModel() {
     // Catalog
     // =========================
 
-// טוען את המוצרים מה-API החיצוני (במקום מ-Firebase)
-val catalogUiState: StateFlow<UiState<List<ShoppingItem>>> = flow {
-    try {
-        android.util.Log.d("API_TEST", "מתחבר ל-API...")
-        val products = RetrofitClient.api.getProducts()
-        android.util.Log.d("API_TEST", "קיבלתי ${products.size} מוצרים מה-API")
-        emit(UiState.Success(products) as UiState<List<ShoppingItem>>)
-    } catch (e: Exception) {
-        android.util.Log.e("API_TEST", "שגיאה: ${e.message}", e)
-        emit(UiState.Error("שגיאה בחיבור ל-API: ${e.message}"))
-    }
-}.stateIn(
-    scope = viewModelScope,
-    started = SharingStarted.WhileSubscribed(5000),
-    initialValue = UiState.Loading
-)
+    // טוען את המוצרים מה-API החיצוני (במקום מ-Firebase)
+    val catalogUiState: StateFlow<UiState<List<ShoppingItem>>> = flow {
+        try {
+            android.util.Log.d("API_TEST", "מתחבר ל-API...")
+            val products = RetrofitClient.api.getProducts()
+            android.util.Log.d("API_TEST", "קיבלתי ${products.size} מוצרים מה-API")
+            emit(UiState.Success(products) as UiState<List<ShoppingItem>>)
+        } catch (e: Exception) {
+            android.util.Log.e("API_TEST", "שגיאה: ${e.message}", e)
+            emit(UiState.Error("שגיאה בחיבור ל-API: ${e.message}"))
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = UiState.Loading
+    )
     // =========================
     // Shopping list - מבנה ישן
     // =========================
@@ -634,7 +638,7 @@ val catalogUiState: StateFlow<UiState<List<ShoppingItem>>> = flow {
 
         viewModelScope.launch {
             try {
-                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                val db = FirebaseFirestore.getInstance()
 
                 val userQuery = db.collection("users")
                     .whereEqualTo("email", email.trim())
@@ -658,6 +662,18 @@ val catalogUiState: StateFlow<UiState<List<ShoppingItem>>> = flow {
                     ?.firstOrNull { it.id == listId }
 
                 val ownerUid = list?.ownerUid?.takeIf { it.isNotBlank() } ?: currentUserId
+                val currentUserDoc = db.collection("users")
+                    .document(currentUserId)
+                    .get()
+                    .await()
+
+                val currentUserName =
+                    currentUserDoc.getString("displayName")
+                        ?.takeIf { it.isNotBlank() }
+                        ?: auth.currentUser?.email
+                        ?: "משתמש"
+                val listName = list?.name?.takeIf { it.isNotBlank() } ?: "רשימת קניות"
+
 
                 db.collection("users")
                     .document(ownerUid)
@@ -665,11 +681,24 @@ val catalogUiState: StateFlow<UiState<List<ShoppingItem>>> = flow {
                     .document(listId)
                     .update(
                         mapOf(
-                            "sharedWith" to com.google.firebase.firestore.FieldValue.arrayUnion(targetUserId),
-                            "sharedByEmail" to (auth.currentUser?.email ?: "")
+                            "sharedWith" to FieldValue.arrayUnion(targetUserId),
+                            "sharedByEmail" to currentUserName,
+                            "updatedAt" to System.currentTimeMillis()
                         )
                     )
                     .await()
+
+                val notification = AppNotification(
+                    userId = targetUserId,
+                    title = "רשימה חדשה שותפה איתך",
+                    message = "$currentUserName שיתף איתך את הרשימה: $listName",
+                    type = "LIST_SHARED",
+                    relatedListId = listId,
+                    read = false,
+                    createdAt = System.currentTimeMillis()
+                )
+
+                notificationRepository.addNotification(notification)
 
                 _shoppingListActionState.value = UiState.Success("הרשימה שותפה בהצלחה")
 
