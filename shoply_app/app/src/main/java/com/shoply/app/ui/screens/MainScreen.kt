@@ -1,5 +1,7 @@
 package com.shoply.app.ui.screens
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import android.app.Activity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -334,8 +336,7 @@ fun MainScreen(
                         ActiveListHeader(
                             shoppingListsState = shoppingListsState,
                             activeListName = activeListName,
-                            isExpanded = isActiveListHeaderExpanded || activeListName.isBlank(),
-                            onChooseListClick = {
+                            isExpanded = activeListName.isBlank(),                            onChooseListClick = {
                                 viewModel.loadActiveShoppingLists()
                                 showChooseActiveListDialog = true
                             },
@@ -821,8 +822,10 @@ private fun ShoplyDrawerContent(
 ) {
     ModalDrawerSheet {
         Column(
-            modifier = Modifier.padding(ShoplySpacing.medium)
-        ) {
+            modifier = Modifier
+                .padding(ShoplySpacing.medium)
+                .verticalScroll(rememberScrollState())
+        ){
             Text(
                 text = "Shoply",
                 style = MaterialTheme.typography.headlineMedium,

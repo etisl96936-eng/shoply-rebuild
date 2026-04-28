@@ -1,5 +1,8 @@
 package com.shoply.app.ui.screens
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.runtime.getValue
 import com.shoply.app.ui.state.UiState
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -525,6 +528,9 @@ private fun ShoppingListActionsDialog(
         title = { Text(shoppingList.name) },
         text = {
             Column(
+                modifier = Modifier
+                    .heightIn(max = 320.dp)
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 ActionRow(
