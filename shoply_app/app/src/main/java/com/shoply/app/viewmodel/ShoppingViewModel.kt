@@ -711,7 +711,8 @@ class ShoppingViewModel : ViewModel() {
     fun getCurrentUserId(): String = currentUid
 
     fun loadComparisonStores() {
-        val uid = currentUid
+        val uid = _currentShoppingListOwnerUid.value ?: currentUid
+
         if (uid.isBlank()) {
             _comparisonStores.value = DEFAULT_COMPARISON_STORES
             return
