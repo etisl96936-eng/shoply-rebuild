@@ -22,6 +22,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -32,11 +33,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.shoply.app.data.AppNotification
+import com.shoply.app.ui.navigation.Screen
 import com.shoply.app.ui.state.UiState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import androidx.compose.runtime.DisposableEffect
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,13 +98,11 @@ fun NotificationsScreen(
 
                 DisposableEffect(Unit) {
                     onDispose {
-                        if (state is UiState.Success) {
-                            state.data
-                                .filter { !it.read }
-                                .forEach { notification ->
-                                    viewModel.markAsRead(notification.id)
-                                }
-                        }
+                        displayedNotifications
+                            .filter { !it.read }
+                            .forEach { notification ->
+                                viewModel.markAsRead(notification.id)
+                            }
                     }
                 }
 
@@ -131,7 +130,14 @@ fun NotificationsScreen(
                             NotificationCard(
                                 notification = notification,
                                 onClick = {
-                                    // ההתראות יסומנו כנקראות בעת יציאה מהמסך
+                                    if (
+                                        notification.type == "LIST_SHARED" &&
+                                        !notification.relatedListId.isNullOrBlank()
+                                    ) {
+                                        navController.navigate(
+                                            Screen.ListDetails.createRoute(notification.relatedListId)
+                                        )
+                                    }
                                 }
                             )
                         }
