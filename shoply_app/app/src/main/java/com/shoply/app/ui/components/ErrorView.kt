@@ -40,13 +40,13 @@ fun ErrorView(
         )
         Spacer(modifier = Modifier.height(ShoplySpacing.small))
         Text(
-            text = message,
+            text = "שגיאה בחיבור. בדוק את האינטרנט ונסה שוב",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         if (onRetry != null) {
             Spacer(modifier = Modifier.height(ShoplySpacing.small))
-            ShoplyButton(text = "Retry", onClick = onRetry)
+            ShoplyButton(text = "נסה שוב", onClick = onRetry)
         }
     }
 }
