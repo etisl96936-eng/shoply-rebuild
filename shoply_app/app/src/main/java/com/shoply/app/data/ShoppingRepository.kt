@@ -412,7 +412,7 @@ class ShoppingRepository {
         val itemsSnapshot = firestore
             .collection("users")
             .document(uid)
-            .collection("shoppingLists")
+            .collection("shopping_lists")
             .document(listId)
             .collection("items")
             .get()
