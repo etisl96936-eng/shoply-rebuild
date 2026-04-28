@@ -1,5 +1,7 @@
 package com.shoply.app.ui.components
 
+
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -20,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.shoply.app.data.ProductUiModel
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProductPriceCard(
     product: ProductUiModel,
@@ -99,6 +102,7 @@ fun ProductPriceCard(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ProductPriceCardPreviewContent() {
     ProductPriceCard(
