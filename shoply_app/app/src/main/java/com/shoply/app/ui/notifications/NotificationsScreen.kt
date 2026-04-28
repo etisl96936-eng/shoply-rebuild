@@ -38,6 +38,7 @@ import com.shoply.app.ui.state.UiState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.material.icons.filled.ArrowForward
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,7 +59,7 @@ fun NotificationsScreen(
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.Default.ArrowForward,
                             contentDescription = "חזרה"
                         )
                     }
