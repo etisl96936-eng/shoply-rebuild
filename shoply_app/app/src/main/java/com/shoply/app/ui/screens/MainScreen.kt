@@ -69,6 +69,7 @@ import com.shoply.app.viewmodel.ShoppingViewModel
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,6 +108,7 @@ fun MainScreen(
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
+    var visibleItemsCount by remember { mutableStateOf(15) }
 
     var activeListId by remember { mutableStateOf<String?>(null) }
     var activeListName by remember { mutableStateOf("") }
@@ -294,6 +296,12 @@ fun MainScreen(
                             startsWithMatches + containsMatches
                         }
 
+                        val visibleItems = filteredItems.take(visibleItemsCount)
+
+                        LaunchedEffect(selectedCategory, searchQuery) {
+                            visibleItemsCount = 15
+                        }
+
                         val listState = rememberLazyListState()
                         val gridState = rememberLazyGridState()
 
@@ -366,7 +374,7 @@ fun MainScreen(
                                     contentPadding = PaddingValues(ShoplySpacing.medium),
                                     verticalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
                                 ) {
-                                    items(filteredItems, key = { it.id }) { item ->
+                                    items(visibleItems, key = { it.id }) { item ->
                                         ProductPriceCard(
                                             product = item.toProductUiModel(
                                                 isInMyList = activeListItemIds.contains(item.id),
@@ -384,6 +392,19 @@ fun MainScreen(
                                             onDelete = { itemToDelete = item }
                                         )
                                     }
+
+                                    if (visibleItemsCount < filteredItems.size) {
+                                        item {
+                                            Button(
+                                                onClick = { visibleItemsCount += 15 },
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = ShoplySpacing.small)
+                                            ) {
+                                                Text("טען עוד")
+                                            }
+                                        }
+                                    }
                                 }
                             } else {
                                 LazyVerticalGrid(
@@ -394,7 +415,7 @@ fun MainScreen(
                                     verticalArrangement = Arrangement.spacedBy(ShoplySpacing.small),
                                     horizontalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
                                 ) {
-                                    items(filteredItems, key = { it.id }) { item ->
+                                    items(visibleItems, key = { it.id }) { item ->
                                         ProductPriceCard(
                                             product = item.toProductUiModel(
                                                 isInMyList = activeListItemIds.contains(item.id),
@@ -411,6 +432,19 @@ fun MainScreen(
                                             },
                                             onDelete = { itemToDelete = item }
                                         )
+                                    }
+
+                                    if (visibleItemsCount < filteredItems.size) {
+                                        item(span = { GridItemSpan(maxLineSpan) }) {
+                                            Button(
+                                                onClick = { visibleItemsCount += 15 },
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = ShoplySpacing.small)
+                                            ) {
+                                                Text("טען עוד")
+                                            }
+                                        }
                                     }
                                 }
                             }
