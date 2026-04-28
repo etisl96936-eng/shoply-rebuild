@@ -1,7 +1,6 @@
 package com.shoply.app.ui.screens
 
 import android.app.Activity
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,10 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.History
@@ -55,8 +51,6 @@ import com.shoply.app.ui.components.ErrorView
 import com.shoply.app.ui.components.LoadingView
 import com.shoply.app.ui.components.ProductPriceCard
 import com.shoply.app.ui.components.ShoplyAlertDialog
-import com.shoply.app.ui.components.ShoplyButton
-import com.shoply.app.ui.components.ShoplyTextField
 import com.shoply.app.ui.navigation.Screen
 import com.shoply.app.ui.notifications.NotificationViewModel
 import com.shoply.app.ui.notifications.NotificationsBell
@@ -100,8 +94,6 @@ fun MainScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    var showAddDialog by remember { mutableStateOf(false) }
-    var itemToDelete by remember { mutableStateOf<ShoppingItem?>(null) }
     var showLogoutDialog by remember { mutableStateOf(false) }
 
     var isActiveListHeaderExpanded by remember { mutableStateOf(true) }
@@ -234,13 +226,7 @@ fun MainScreen(
                     }
                 )
             },
-            floatingActionButton = {
-                if (isAdmin) {
-                    FloatingActionButton(onClick = { showAddDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "הוסף מוצר")
-                    }
-                }
-            }
+            floatingActionButton = {}
         ) { padding ->
             Column(
                 modifier = Modifier
@@ -359,7 +345,7 @@ fun MainScreen(
                             Box(modifier = Modifier.fillMaxSize()) {
                                 Text(
                                     text = if (baseItems.isEmpty()) {
-                                        "אין פריטים בקטלוג. לחץ על ה־+ להוספה"
+                                        "לא התקבלו מוצרים מה־API"
                                     } else {
                                         "לא נמצאו פריטים התואמים לחיפוש"
                                     },
@@ -383,7 +369,7 @@ fun MainScreen(
                                                 isInMyList = activeListItemIds.contains(item.id),
                                                 comparisonStores = comparisonStores
                                             ),
-                                            isAdmin = isAdmin,
+                                            isAdmin = false,
                                             onToggleInList = {
                                                 if (activeListId == null) {
                                                     viewModel.loadActiveShoppingLists()
@@ -393,7 +379,7 @@ fun MainScreen(
                                                     showAddToListDialog = true
                                                 }
                                             },
-                                            onDelete = { itemToDelete = item }
+                                            onDelete = {}
                                         )
                                     }
 
@@ -425,7 +411,7 @@ fun MainScreen(
                                                 isInMyList = activeListItemIds.contains(item.id),
                                                 comparisonStores = comparisonStores
                                             ),
-                                            isAdmin = isAdmin,
+                                            isAdmin = false,
                                             onToggleInList = {
                                                 if (activeListId == null) {
                                                     showChooseActiveListDialog = true
@@ -434,7 +420,7 @@ fun MainScreen(
                                                     showAddToListDialog = true
                                                 }
                                             },
-                                            onDelete = { itemToDelete = item }
+                                            onDelete = {}
                                         )
                                     }
 
@@ -493,19 +479,6 @@ fun MainScreen(
                         showAddToListDialog = false
                         catalogItemToAdd = null
                     }
-                )
-            }
-
-            itemToDelete?.let { item ->
-                ShoplyAlertDialog(
-                    title = "מחיקת מוצר",
-                    message = "האם את בטוחה שברצונך למחוק את '${item.title}'?",
-                    confirmText = "מחק",
-                    dismissText = "ביטול",
-                    onConfirm = {
-                        itemToDelete = null
-                    },
-                    onDismiss = { itemToDelete = null }
                 )
             }
 
@@ -1009,102 +982,3 @@ fun CategoryChips(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AddItemDialog(
-    onDismiss: () -> Unit,
-    onConfirm: (String, String, String, String) -> Unit
-) {
-    var name by remember { mutableStateOf("") }
-    var quantity by remember { mutableStateOf("1") }
-    var description by remember { mutableStateOf("") }
-
-    val categories = listOf(
-        "פירות וירקות",
-        "מוצרי חלב וביצים",
-        "ניקיון והיגיינה",
-        "מאפה ודגנים",
-        "שימורים ומזווה",
-        "בשר ודגים",
-        "מוצרי מקפיא",
-        "אחר"
-    )
-    var expanded by remember { mutableStateOf(false) }
-    var selectedCategory by remember { mutableStateOf(categories[0]) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("הוספת מוצר חדש", style = MaterialTheme.typography.headlineSmall) },
-        text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                ShoplyTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = "שם המוצר *"
-                )
-                Spacer(modifier = Modifier.height(ShoplySpacing.small))
-
-                ShoplyTextField(
-                    value = quantity,
-                    onValueChange = { quantity = it },
-                    label = "כמות"
-                )
-                Spacer(modifier = Modifier.height(ShoplySpacing.medium))
-
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded }
-                ) {
-                    OutlinedTextField(
-                        value = selectedCategory,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("בחר קטגוריה") },
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                        },
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        categories.forEach { category ->
-                            DropdownMenuItem(
-                                text = { Text(category) },
-                                onClick = {
-                                    selectedCategory = category
-                                    expanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(ShoplySpacing.small))
-                ShoplyTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    label = "תיאור (אופציונלי)"
-                )
-            }
-        },
-        confirmButton = {
-            ShoplyButton(
-                text = "הוסף",
-                onClick = {
-                    if (name.isNotBlank()) {
-                        onConfirm(name, quantity, description, selectedCategory)
-                    }
-                }
-            )
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("ביטול")
-            }
-        }
-    )
-}

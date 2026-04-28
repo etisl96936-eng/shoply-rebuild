@@ -15,7 +15,6 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.shoply.app.data.ShoppingItem
 import com.shoply.app.data.ShoppingList
-import com.shoply.app.data.StorePrice
 import com.shoply.app.ui.state.UiState
 import com.shoply.app.viewmodel.ShoppingViewModel
 import kotlinx.coroutines.launch
@@ -33,8 +32,6 @@ fun ListDetailsScreen(
     val scope = rememberCoroutineScope()
     val actionState by viewModel.shoppingListActionState.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
-    var newItemQuantity by remember { mutableStateOf("1") }
-    var showSelectStoreDialog by remember { mutableStateOf(false) }
 
     val listInfoState by viewModel.currentShoppingListInfoUiState.collectAsState()
     val itemsState by viewModel.shoppingListItemsUiState.collectAsState()
@@ -124,11 +121,9 @@ fun ListDetailsScreen(
                             items = items.map {
                                 if (it.id == item.id) it.copy(isChecked = true) else it
                             },
-                            selectedStore = selectedStore!!,
+                            selectedStore = selectedStore.orEmpty(),
                             totalAmount = total
                         )
-
-                        viewModel.archiveShoppingList(listId)
 
                         navController.popBackStack()
                     }
@@ -189,7 +184,6 @@ fun ListDetailsScreen(
                     style = MaterialTheme.typography.titleLarge
                 )
             }
-
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -405,16 +399,10 @@ private fun ShoppingListItemRow(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
-                                    text = store,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    maxLines = 1
-                                )
-
-                                Text(
                                     text = if (price != null) {
                                         "₪${"%.2f".format(price)}"
                                     } else {
-                                        "₪0.00"
+                                        "אין מחיר"
                                     },
                                     style = MaterialTheme.typography.labelSmall
                                 )
