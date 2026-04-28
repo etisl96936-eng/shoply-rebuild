@@ -67,6 +67,8 @@ import com.shoply.app.ui.theme.rememberShoplyWindowSize
 import com.shoply.app.viewmodel.AuthViewModel
 import com.shoply.app.viewmodel.ShoppingViewModel
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -292,6 +294,14 @@ fun MainScreen(
                             startsWithMatches + containsMatches
                         }
 
+                        val listState = rememberLazyListState()
+                        val gridState = rememberLazyGridState()
+
+                        LaunchedEffect(selectedCategory) {
+                            listState.scrollToItem(0)
+                            gridState.scrollToItem(0)
+                        }
+
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
@@ -351,6 +361,7 @@ fun MainScreen(
                         } else {
                             if (windowSize.isCompact) {
                                 LazyColumn(
+                                    state = listState,
                                     modifier = Modifier.fillMaxSize(),
                                     contentPadding = PaddingValues(ShoplySpacing.medium),
                                     verticalArrangement = Arrangement.spacedBy(ShoplySpacing.small)
@@ -376,6 +387,7 @@ fun MainScreen(
                                 }
                             } else {
                                 LazyVerticalGrid(
+                                    state = gridState,
                                     columns = GridCells.Fixed(gridColumns),
                                     modifier = Modifier.fillMaxSize(),
                                     contentPadding = PaddingValues(ShoplySpacing.medium),
