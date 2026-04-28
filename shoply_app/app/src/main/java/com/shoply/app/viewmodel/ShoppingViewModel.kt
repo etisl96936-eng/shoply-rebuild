@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import com.shoply.app.data.StorePrice
 import kotlinx.coroutines.tasks.await
 import com.shoply.app.network.RetrofitClient
 import kotlinx.coroutines.flow.flow
@@ -475,57 +474,6 @@ class ShoppingViewModel : ViewModel() {
     // Catalog actions
     // =========================
 
-    fun addItem(name: String, quantity: String, description: String, category: String) {
-        viewModelScope.launch {
-            try {
-                val apiProducts = RetrofitClient.api.searchProducts(name)
-
-                val matchedProduct = apiProducts.firstOrNull {
-                    it.title.equals(name, ignoreCase = true)
-                } ?: apiProducts.firstOrNull()
-
-                val newItem = ShoppingItem(
-                    title = name,
-                    quantity = quantity,
-                    description = description.ifBlank {
-                        matchedProduct?.description ?: ""
-                    },
-                    category = category.ifBlank {
-                        matchedProduct?.category ?: ""
-                    },
-                    timestamp = System.currentTimeMillis(),
-
-                    // המחירים מגיעים מה-API בלבד
-                    storePrices = matchedProduct?.storePrices ?: emptyList()
-                )
-
-                repository.addItem(newItem)
-
-            } catch (e: Exception) {
-                e.printStackTrace()
-
-                val newItem = ShoppingItem(
-                    title = name,
-                    quantity = quantity,
-                    description = description,
-                    category = category,
-                    timestamp = System.currentTimeMillis(),
-
-                    // אין מחירים מקומיים במקרה של כשל
-                    storePrices = emptyList()
-                )
-
-                repository.addItem(newItem)
-            }
-        }
-    }
-
-    fun deleteItem(itemId: String) {
-        viewModelScope.launch {
-            repository.deleteItem(itemId)
-        }
-    }
-
     // =========================
     // Old personal shopping list actions
     // =========================
@@ -571,8 +519,11 @@ class ShoppingViewModel : ViewModel() {
         if (uid.isBlank()) return
 
         viewModelScope.launch {
+            val listId = _currentShoppingListId.value ?: return@launch
+
             repository.completeShoppingList(
                 uid = uid,
+                listId = listId,
                 listName = listName,
                 items = items,
                 selectedStore = selectedStore,
