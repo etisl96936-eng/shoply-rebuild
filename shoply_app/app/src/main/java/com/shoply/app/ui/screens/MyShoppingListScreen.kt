@@ -179,11 +179,19 @@ fun MyShoppingListScreen(
 
                             if (myLists.isNotEmpty()) {
                                 item {
-                                    Text(
-                                        text = "הרשימות שלי",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                                    Column {
+                                        Text(
+                                            text = "הרשימות שלי",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+
+                                        Text(
+                                            text = "סה\"כ רשימות פעילות: ${myLists.size}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
                                 }
 
                                 items(myLists, key = { it.id }) { shoppingList ->
