@@ -110,6 +110,7 @@ fun MainScreen(
     var showAddToListDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
+        viewModel.loadCatalog()
         viewModel.loadActiveShoppingLists()
         viewModel.loadComparisonStores()
         notificationViewModel.loadNotifications()
@@ -247,7 +248,9 @@ fun MainScreen(
                         Box(modifier = Modifier.fillMaxSize()) {
                             ErrorView(
                                 message = s.message,
-                                onRetry = { },
+                                onRetry = {
+                                    viewModel.loadCatalog()
+                                },
                                 modifier = Modifier.align(Alignment.Center)
                             )
                         }

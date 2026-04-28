@@ -58,21 +58,27 @@ class ShoppingViewModel : ViewModel() {
     // =========================
 
     // טוען את המוצרים מה-API החיצוני (במקום מ-Firebase)
-    val catalogUiState: StateFlow<UiState<List<ShoppingItem>>> = flow {
-        try {
-            android.util.Log.d("API_TEST", "מתחבר ל-API...")
-            val products = RetrofitClient.api.getProducts()
-            android.util.Log.d("API_TEST", "קיבלתי ${products.size} מוצרים מה-API")
-            emit(UiState.Success(products) as UiState<List<ShoppingItem>>)
-        } catch (e: Exception) {
-            android.util.Log.e("API_TEST", "שגיאה: ${e.message}", e)
-            emit(UiState.Error("שגיאה בחיבור ל-API: ${e.message}"))
+    private val _catalogUiState =
+        MutableStateFlow<UiState<List<ShoppingItem>>>(UiState.Loading)
+
+    val catalogUiState: StateFlow<UiState<List<ShoppingItem>>> = _catalogUiState
+
+    fun loadCatalog() {
+        viewModelScope.launch {
+            _catalogUiState.value = UiState.Loading
+
+            try {
+                android.util.Log.d("API_TEST", "מתחבר ל-API...")
+                val products = RetrofitClient.api.getProducts()
+                android.util.Log.d("API_TEST", "קיבלתי ${products.size} מוצרים מה-API")
+
+                _catalogUiState.value = UiState.Success(products)
+            } catch (e: Exception) {
+                android.util.Log.e("API_TEST", "שגיאה: ${e.message}", e)
+                _catalogUiState.value = UiState.Error("שגיאה בחיבור. בדקי את האינטרנט ונסי שוב")
+            }
         }
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = UiState.Loading
-    )
+    }
     // =========================
     // Shopping list - מבנה ישן
     // =========================
