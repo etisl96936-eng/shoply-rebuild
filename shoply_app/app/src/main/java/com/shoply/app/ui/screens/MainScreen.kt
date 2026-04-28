@@ -346,7 +346,10 @@ fun MainScreen(
                             shoppingListsState = shoppingListsState,
                             activeListName = activeListName,
                             isExpanded = isActiveListHeaderExpanded || activeListName.isBlank(),
-                            onChooseListClick = { showChooseActiveListDialog = true },
+                            onChooseListClick = {
+                                viewModel.loadActiveShoppingLists()
+                                showChooseActiveListDialog = true
+                            },
                             onGoToMyListsClick = { navController.navigate(Screen.MyLists.route) }
                         )
 
@@ -383,6 +386,7 @@ fun MainScreen(
                                             isAdmin = isAdmin,
                                             onToggleInList = {
                                                 if (activeListId == null) {
+                                                    viewModel.loadActiveShoppingLists()
                                                     showChooseActiveListDialog = true
                                                 } else {
                                                     catalogItemToAdd = item
@@ -466,6 +470,7 @@ fun MainScreen(
             if (showChooseActiveListDialog) {
                 ChooseActiveListDialog(
                     shoppingListsState = shoppingListsState,
+                    currentUserId = viewModel.getCurrentUserId(),
                     currentActiveListId = activeListId,
                     onDismiss = { showChooseActiveListDialog = false },
                     onSelectList = { list ->
@@ -580,7 +585,10 @@ private fun ActiveListHeader(
         }
 
         is UiState.Success -> {
-            if (shoppingListsState.data.isEmpty()) {
+            val activeLists = shoppingListsState.data.filter { list ->
+                list.status == ShoppingList.STATUS_ACTIVE
+            }
+            if (activeLists.isEmpty()) {
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -693,6 +701,7 @@ private fun ActiveListHeader(
 @Composable
 private fun ChooseActiveListDialog(
     shoppingListsState: UiState<List<ShoppingList>>,
+    currentUserId: String,
     currentActiveListId: String?,
     onDismiss: () -> Unit,
     onSelectList: (ShoppingList) -> Unit,
@@ -712,11 +721,15 @@ private fun ChooseActiveListDialog(
                 }
 
                 is UiState.Success -> {
-                    if (shoppingListsState.data.isEmpty()) {
+                    val activeLists = shoppingListsState.data.filter { list ->
+                        list.status == ShoppingList.STATUS_ACTIVE &&
+                                (list.ownerUid == currentUserId || list.sharedWith.contains(currentUserId))
+                    }
+                    if (activeLists.isEmpty()) {
                         Text("אין עדיין רשימות פעילות")
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            shoppingListsState.data.forEach { list ->
+                            activeLists.forEach { list ->
                                 OutlinedButton(
                                     onClick = { onSelectList(list) },
                                     modifier = Modifier.fillMaxWidth()
