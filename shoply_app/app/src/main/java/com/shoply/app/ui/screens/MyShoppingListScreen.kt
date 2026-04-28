@@ -126,18 +126,6 @@ fun MyShoppingListScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surfaceVariant
-            ) {
-                Text(
-                    text = "לחיצה לפתיחה • לחיצה ארוכה לניהול",
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
 
             when (val state = shoppingListsState) {
                 UiState.Loading -> {
@@ -491,19 +479,7 @@ private fun ShoppingListCard(
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        AssistChip(
-                            onClick = { },
-                            label = {
-                                Text(
-                                    text = when (shoppingList.status) {
-                                        ShoppingList.STATUS_ACTIVE -> "פעילה"
-                                        ShoppingList.STATUS_ARCHIVED -> "בארכיון"
-                                        ShoppingList.STATUS_COMPLETED -> "הושלמה"
-                                        else -> shoppingList.status
-                                    }
-                                )
-                            }
-                        )
+
 
                         shoppingList.selectedStore
                             ?.takeIf { it.isNotBlank() }
