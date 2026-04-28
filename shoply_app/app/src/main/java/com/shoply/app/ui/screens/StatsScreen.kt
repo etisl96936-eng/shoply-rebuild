@@ -824,38 +824,19 @@ private fun CompletedListsBarChart(
 
 private fun getCategoryColor(category: String): Int {
     return when (category.trim()) {
+        "ביצים ודגנים" -> AndroidColor.rgb(255, 193, 7)      // צהוב
+        "פחמימות" -> AndroidColor.rgb(255, 87, 34)           // כתום-אדום
+        "שתייה", "שתיה" -> AndroidColor.rgb(0, 188, 212)     // טורקיז
+        "בשר ודגים" -> AndroidColor.rgb(121, 85, 72)         // חום
+        "חטיפים ומתוקים" -> AndroidColor.rgb(233, 30, 99)   // ורוד
+        "ירקות" -> AndroidColor.rgb(76, 175, 80)             // ירוק
+        "מוצרי חלב" -> AndroidColor.rgb(33, 150, 243)        // כחול
+        "מוצרי ניקיון" -> AndroidColor.rgb(156, 39, 176)     // סגול
+        "פירות" -> AndroidColor.rgb(63, 81, 181)             // אינדיגו
 
-        "ביצים ודגנים" ->
-            AndroidColor.rgb(255, 193, 7)   // צהוב
-
-        "בשר ודגנים" ->
-            AndroidColor.rgb(244, 67, 54)   // אדום
-
-        "חטיפים ומתוקים" ->
-            AndroidColor.rgb(233, 30, 99)   // ורוד
-
-        "מוצרי חלב" ->
-            AndroidColor.rgb(33, 150, 243)  // כחול
-
-        "ירקות" ->
-            AndroidColor.rgb(76, 175, 80)   // ירוק
-
-        "פירות" ->
-            AndroidColor.rgb(139, 195, 74)  // ירוק בהיר
-
-        "מוצרי ניקיון" ->
-            AndroidColor.rgb(156, 39, 176)  // סגול
-
-        "פחמימות" ->
-            AndroidColor.rgb(255, 152, 0)   // כתום
-
-        "שתיה" ->
-            AndroidColor.rgb(0, 188, 212)   // טורקיז
-
-        else ->
-            AndroidColor.rgb(96, 125, 139)  // אפור-כחול
+        else -> AndroidColor.rgb(158, 158, 158)
     }
-}
+    }
 
 private class CurrencyValueFormatter : ValueFormatter() {
     override fun getFormattedValue(value: Float): String {
