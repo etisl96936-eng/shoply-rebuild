@@ -67,6 +67,7 @@ fun LoginScreen(
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(authState.isAuthenticated, authState.userRole) {
         if (authState.isAuthenticated) {
@@ -144,7 +145,9 @@ fun LoginScreen(
                         },
                         label = "סיסמה",
                         keyboardType = KeyboardType.Password,
-                        isPassword = true
+                        isPassword = true,
+                        passwordVisible = passwordVisible,
+                        onPasswordVisibilityChange = { passwordVisible = !passwordVisible }
                     )
 
                     ShoplyButton(

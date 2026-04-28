@@ -11,7 +11,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 /**
  * שדה טקסט סטנדרטי של Shoply
  * מעודכן לעקביות עם Design System - אבן דרך 1.5
@@ -38,7 +42,9 @@ fun ShoplyTextField(
     enabled: Boolean = true,
     singleLine: Boolean = true,
     supportingText: String? = null,
-    isError: Boolean = false
+    isError: Boolean = false,
+    passwordVisible: Boolean = false,
+    onPasswordVisibilityChange: (() -> Unit)? = null
 ) {
     OutlinedTextField(
         value = value,
@@ -62,10 +68,21 @@ fun ShoplyTextField(
             }
         },
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        visualTransformation = if (isPassword)
+        visualTransformation = if (isPassword && !passwordVisible)
             PasswordVisualTransformation()
         else
             VisualTransformation.None,
+        trailingIcon = {
+            if (isPassword && onPasswordVisibilityChange != null) {
+                IconButton(onClick = onPasswordVisibilityChange) {
+                    Icon(
+                        imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = if (passwordVisible) "הסתר סיסמה" else "הצג סיסמה"
+                    )
+                }
+            }
+        },
+
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.primary,
             unfocusedBorderColor = MaterialTheme.colorScheme.outline,
