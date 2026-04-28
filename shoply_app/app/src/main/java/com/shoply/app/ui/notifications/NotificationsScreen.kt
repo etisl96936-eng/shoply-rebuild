@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.ArrowForward
 @Composable
 fun NotificationsScreen(
     navController: NavHostController,
+    isAdmin: Boolean,
     viewModel: NotificationViewModel = viewModel()
 ) {
     val notificationsState by viewModel.notificationsUiState.collectAsStateWithLifecycle()
@@ -131,13 +132,19 @@ fun NotificationsScreen(
                             NotificationCard(
                                 notification = notification,
                                 onClick = {
-                                    if (
-                                        notification.type == "LIST_SHARED" &&
-                                        !notification.relatedListId.isNullOrBlank()
-                                    ) {
-                                        navController.navigate(
-                                            Screen.ListDetails.createRoute(notification.relatedListId)
-                                        )
+                                    when (notification.type) {
+                                        "LIST_SHARED" -> {
+                                            val relatedListId = notification.relatedListId
+                                            if (!relatedListId.isNullOrBlank()) {
+                                                navController.navigate(
+                                                    Screen.ListDetails.createRoute(relatedListId)
+                                                )
+                                            }
+                                        }
+
+                                        "REPORT_READY" -> {
+                                            navController.navigate("${Screen.Stats.route}/$isAdmin")
+                                        }
                                     }
                                 }
                             )

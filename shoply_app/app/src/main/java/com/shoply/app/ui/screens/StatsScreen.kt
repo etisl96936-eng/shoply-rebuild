@@ -823,16 +823,37 @@ private fun CompletedListsBarChart(
 }
 
 private fun getCategoryColor(category: String): Int {
-    return when (category) {
-        "פירות וירקות" -> AndroidColor.rgb(76, 175, 80)
-        "מוצרי חלב וביצים" -> AndroidColor.rgb(33, 150, 243)
-        "ניקיון והיגיינה" -> AndroidColor.rgb(156, 39, 176)
-        "מאפה ודגנים" -> AndroidColor.rgb(255, 193, 7)
-        "שימורים ומזווה" -> AndroidColor.rgb(255, 152, 0)
-        "בשר ודגים" -> AndroidColor.rgb(244, 67, 54)
-        "מוצרי מקפיא" -> AndroidColor.rgb(0, 188, 212)
-        "אחר" -> AndroidColor.rgb(158, 158, 158)
-        else -> AndroidColor.rgb(96, 125, 139)
+    return when (category.trim()) {
+
+        "ביצים ודגנים" ->
+            AndroidColor.rgb(255, 193, 7)   // צהוב
+
+        "בשר ודגנים" ->
+            AndroidColor.rgb(244, 67, 54)   // אדום
+
+        "חטיפים ומתוקים" ->
+            AndroidColor.rgb(233, 30, 99)   // ורוד
+
+        "מוצרי חלב" ->
+            AndroidColor.rgb(33, 150, 243)  // כחול
+
+        "ירקות" ->
+            AndroidColor.rgb(76, 175, 80)   // ירוק
+
+        "פירות" ->
+            AndroidColor.rgb(139, 195, 74)  // ירוק בהיר
+
+        "מוצרי ניקיון" ->
+            AndroidColor.rgb(156, 39, 176)  // סגול
+
+        "פחמימות" ->
+            AndroidColor.rgb(255, 152, 0)   // כתום
+
+        "שתיה" ->
+            AndroidColor.rgb(0, 188, 212)   // טורקיז
+
+        else ->
+            AndroidColor.rgb(96, 125, 139)  // אפור-כחול
     }
 }
 

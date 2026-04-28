@@ -92,7 +92,8 @@ fun NavGraph(activity: Activity) {
         }
         composable("notifications") {
             NotificationsScreen(
-                navController = navController
+                navController = navController,
+                isAdmin = authState.userRole == "admin"
             )
         }
 

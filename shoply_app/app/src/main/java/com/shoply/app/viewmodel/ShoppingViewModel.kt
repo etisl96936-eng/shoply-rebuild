@@ -552,6 +552,18 @@ class ShoppingViewModel : ViewModel() {
                 selectedStore = selectedStore,
                 totalAmount = totalAmount
             )
+
+            val reportNotification = AppNotification(
+                userId = uid,
+                title = "דוחות מוכנים לצפייה",
+                message = "ניתן לצפות עכשיו בדוחות על הקנייה האחרונה שלך: $listName",
+                type = "REPORT_READY",
+                relatedListId = null,
+                read = false,
+                createdAt = System.currentTimeMillis()
+            )
+
+            notificationRepository.addNotification(reportNotification)
         }
     }
 
@@ -662,6 +674,7 @@ class ShoppingViewModel : ViewModel() {
                     ?.firstOrNull { it.id == listId }
 
                 val ownerUid = list?.ownerUid?.takeIf { it.isNotBlank() } ?: currentUserId
+
                 val currentUserDoc = db.collection("users")
                     .document(currentUserId)
                     .get()
@@ -672,8 +685,8 @@ class ShoppingViewModel : ViewModel() {
                         ?.takeIf { it.isNotBlank() }
                         ?: auth.currentUser?.email
                         ?: "משתמש"
-                val listName = list?.name?.takeIf { it.isNotBlank() } ?: "רשימת קניות"
 
+                val listName = list?.name?.takeIf { it.isNotBlank() } ?: "רשימת קניות"
 
                 db.collection("users")
                     .document(ownerUid)
