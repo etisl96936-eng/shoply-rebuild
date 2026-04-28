@@ -770,6 +770,9 @@ private fun AddCatalogItemToListDialog(
 ) {
     var quantity by remember { mutableStateOf("1") }
 
+    fun quantityAsInt(): Int =
+        quantity.toIntOrNull()?.coerceAtLeast(1) ?: 1
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("הוספה לרשימה") },
@@ -778,21 +781,54 @@ private fun AddCatalogItemToListDialog(
                 Text("מוצר: $itemTitle")
                 Text("רשימה: $listName")
 
-                OutlinedTextField(
-                    value = quantity,
-                    onValueChange = { newValue ->
-                        quantity = newValue.filter { it.isDigit() }.ifBlank { "" }
-                    },
-                    label = { Text("כמות") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                Text(
+                    text = "כמות",
+                    style = MaterialTheme.typography.labelLarge
                 )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            quantity = (quantityAsInt() - 1)
+                                .coerceAtLeast(1)
+                                .toString()
+                        }
+                    ) {
+                        Text("-")
+                    }
+
+                    OutlinedTextField(
+                        value = quantity,
+                        onValueChange = { newValue ->
+                            quantity = newValue
+                                .filter { it.isDigit() }
+                                .take(3)
+                        },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                        textStyle = MaterialTheme.typography.titleMedium.copy(
+                            textAlign = TextAlign.Center
+                        )
+                    )
+
+                    OutlinedButton(
+                        onClick = {
+                            quantity = (quantityAsInt() + 1).toString()
+                        }
+                    ) {
+                        Text("+")
+                    }
+                }
             }
         },
         confirmButton = {
             TextButton(
                 onClick = {
-                    onConfirm(if (quantity.isBlank()) "1" else quantity)
+                    onConfirm(quantityAsInt().toString())
                 }
             ) {
                 Text("הוסף")
@@ -805,7 +841,6 @@ private fun AddCatalogItemToListDialog(
         }
     )
 }
-
 @Composable
 private fun ShoplyDrawerContent(
     displayName: String,
