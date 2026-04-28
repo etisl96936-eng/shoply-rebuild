@@ -179,7 +179,7 @@ fun CompletedListsScreen(
 
                     item {
                         Text(
-                            text = "סה\"כ רשימות בארכיון: ${completedLists.size}",
+                            text = "סה\"כ רשימות בארכיון: ${filteredLists.size}",
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.fillMaxWidth()
