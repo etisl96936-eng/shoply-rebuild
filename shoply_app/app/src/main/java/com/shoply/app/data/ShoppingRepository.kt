@@ -407,4 +407,23 @@ class ShoppingRepository {
             )
             .await()
     }
+
+    suspend fun markAllItemsAsPurchased(uid: String, listId: String) {
+        val itemsSnapshot = firestore
+            .collection("users")
+            .document(uid)
+            .collection("shoppingLists")
+            .document(listId)
+            .collection("items")
+            .get()
+            .await()
+
+        val batch = firestore.batch()
+
+        itemsSnapshot.documents.forEach { document ->
+            batch.update(document.reference, "checked", true)
+        }
+
+        batch.commit().await()
+    }
 }

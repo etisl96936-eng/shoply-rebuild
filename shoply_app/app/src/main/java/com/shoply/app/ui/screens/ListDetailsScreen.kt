@@ -19,6 +19,7 @@ import com.shoply.app.ui.state.UiState
 import com.shoply.app.viewmodel.ShoppingViewModel
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.ui.platform.LocalContext
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,6 +40,8 @@ fun ListDetailsScreen(
     var lastItemToComplete by remember { mutableStateOf<ShoppingItem?>(null) }
     var showShareDialog by remember { mutableStateOf(false) }
     var shareEmail by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    var showArchiveDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(listId) {
         viewModel.setCurrentShoppingList(listId)
@@ -99,7 +102,7 @@ fun ListDetailsScreen(
     }
     val selectedStore = (listInfoState as? UiState.Success)?.data?.selectedStore
 
-    if (showFinishDialog && lastItemToComplete != null) {
+    if (showFinishDialog) {
         AlertDialog(
             onDismissRequest = { showFinishDialog = false },
             title = { Text("סיום קנייה") },
@@ -109,17 +112,23 @@ fun ListDetailsScreen(
                     onClick = {
                         showFinishDialog = false
 
-                        val item = lastItemToComplete!!
+                        val item = lastItemToComplete
 
-                        viewModel.toggleItemCheckedInCurrentShoppingList(listId, item)
+                        if (item != null) {
+                            viewModel.toggleItemCheckedInCurrentShoppingList(listId, item)
+                        }
 
                         val total = totals[selectedStore] ?: 0.0
                         val listName = (listInfoState as? UiState.Success)?.data?.name ?: ""
                         viewModel.completeShoppingList(
                             listName = listName,
 
-                            items = items.map {
-                                if (it.id == item.id) it.copy(isChecked = true) else it
+                            items = if (item != null) {
+                                items.map {
+                                    if (it.id == item.id) it.copy(isChecked = true) else it
+                                }
+                            } else {
+                                items.map { it.copy(isChecked = true) }
                             },
                             selectedStore = selectedStore.orEmpty(),
                             totalAmount = total
@@ -162,6 +171,7 @@ fun ListDetailsScreen(
                     }
                 },
                 actions = {
+
                     IconButton(onClick = { showShareDialog = true }) {
                         Icon(Icons.Default.Share, contentDescription = "שיתוף")
                     }
@@ -245,6 +255,34 @@ fun ListDetailsScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
             }
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    Checkbox(
+                        checked = items.isNotEmpty() && items.all { it.isChecked },
+                        onCheckedChange = {
+                            if (selectedStore.isNullOrBlank()) {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("יש לבחור את הסופר בו התבצעה הקנייה")
+                                }
+                            } else {
+                                viewModel.markAllItemsAsPurchased(listId)
+                                showFinishDialog = true
+                            }
+                        }
+                    )
+
+                    Text(
+                        text = "לסימון כל הפריטים",
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
+                }
+            }
+
+
 
             when (val state = itemsState) {
                 UiState.Loading -> {

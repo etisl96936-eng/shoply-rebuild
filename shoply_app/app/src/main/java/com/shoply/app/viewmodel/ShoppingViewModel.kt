@@ -726,5 +726,20 @@ class ShoppingViewModel : ViewModel() {
             }
         }
     }
+
+    fun markAllItemsAsPurchased(listId: String) {
+        val uid = _currentShoppingListOwnerUid.value ?: currentUid
+        if (uid.isBlank()) return
+
+        viewModelScope.launch {
+            repository.markAllItemsAsPurchased(
+                uid = uid,
+                listId = listId
+            )
+
+            setCurrentShoppingList(listId)
+            loadCurrentShoppingListInfo(listId)
+        }
+    }
 }
 
