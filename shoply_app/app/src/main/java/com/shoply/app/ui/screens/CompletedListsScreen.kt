@@ -177,6 +177,15 @@ fun CompletedListsScreen(
                         }
                     }
 
+                    item {
+                        Text(
+                            text = "סה\"כ רשימות בארכיון: ${completedLists.size}",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
                     if (completedLists.isEmpty()) {
                         item {
                             Text("אין עדיין רשימות שהושלמו")
