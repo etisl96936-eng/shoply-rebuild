@@ -45,6 +45,7 @@ fun ListDetailsScreen(
 
     LaunchedEffect(listId) {
         viewModel.setCurrentShoppingList(listId)
+        viewModel.loadComparisonStores()
     }
     LaunchedEffect(actionState) {
         when (val state = actionState) {
@@ -83,7 +84,7 @@ fun ListDetailsScreen(
         startsWithMatches + containsMatches
     }
 
-    val stores = listOf("שופרסל", "רמי לוי", "ויקטורי")
+    val stores by viewModel.comparisonStores.collectAsState()
 
     val totals = stores.associateWith { store ->
         var total = 0.0
