@@ -222,13 +222,14 @@ fun MyShoppingListScreen(
                                     ShoppingListCard(
                                         shoppingList = shoppingList,
                                         isShared = true,
+                                        showMenu = false,
                                         onClick = {
                                             navController.navigate(
                                                 Screen.ListDetails.createRoute(shoppingList.id)
                                             )
                                         },
-                                        onLongClick = { selectedListForMenu = shoppingList },
-                                        onMenuClick = { selectedListForMenu = shoppingList }
+                                        onLongClick = { },
+                                        onMenuClick = { }
                                     )
                                 }
                             }
@@ -441,6 +442,7 @@ private fun StatusMessageCard(
 private fun ShoppingListCard(
     shoppingList: ShoppingList,
     isShared: Boolean = false,
+    showMenu: Boolean = true,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onMenuClick: () -> Unit
@@ -512,11 +514,13 @@ private fun ShoppingListCard(
                     }
                 }
 
-                IconButton(onClick = onMenuClick) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "פעולות"
-                    )
+                if (showMenu) {
+                    IconButton(onClick = onMenuClick) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "פעולות"
+                        )
+                    }
                 }
             }
 
