@@ -734,15 +734,39 @@ private fun CategoryPieChart(
     AndroidView(
         modifier = Modifier
             .fillMaxWidth()
-            .height(300.dp),
+            .height(430.dp),
         factory = { context ->
             PieChart(context).apply {
                 description.isEnabled = false
                 setUsePercentValues(true)
-                setEntryLabelTextSize(12f)
-                legend.isEnabled = true
                 setNoDataText("אין נתוני קטגוריות להצגה")
                 animateY(1000)
+
+                setDrawEntryLabels(true)
+                setEntryLabelTextSize(11f)
+                setEntryLabelColor(AndroidColor.BLACK)
+
+                holeRadius = 42f
+                transparentCircleRadius = 46f
+
+                setExtraOffsets(4f, 4f, 4f, 18f)
+                setMinOffset(6f)
+
+                legend.apply {
+                    isEnabled = true
+                    orientation = com.github.mikephil.charting.components.Legend.LegendOrientation.HORIZONTAL
+                    horizontalAlignment = com.github.mikephil.charting.components.Legend.LegendHorizontalAlignment.CENTER
+                    verticalAlignment = com.github.mikephil.charting.components.Legend.LegendVerticalAlignment.BOTTOM
+                    setDrawInside(false)
+
+                    isWordWrapEnabled = true
+                    maxSizePercent = 0.85f
+
+                    textSize = 10f
+                    formSize = 9f
+                    xEntrySpace = 6f
+                    yEntrySpace = 4f
+                }
             }
         },
         update = { chart ->
@@ -756,8 +780,11 @@ private fun CategoryPieChart(
                 PieEntry(total.toFloat(), category)
             }
 
-            val dataSet = PieDataSet(entries, "פילוח לפי קטגוריות").apply {
-                valueTextSize = 12f
+            val dataSet = PieDataSet(entries, "").apply {
+                valueTextSize = 11f
+                valueTextColor = AndroidColor.BLACK
+                sliceSpace = 2f
+                selectionShift = 6f
                 colors = entries.map { entry ->
                     getCategoryColor(entry.label)
                 }
