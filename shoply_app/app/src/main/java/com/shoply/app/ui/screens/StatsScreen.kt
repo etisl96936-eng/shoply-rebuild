@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -19,6 +21,8 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -61,10 +65,6 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -129,13 +129,13 @@ fun StatsScreen(
 
             val categoryCounts = filteredLists
                 .flatMap { it.items }
-                .groupBy { it.category.ifBlank { "כללי" } }
+                .groupBy { normalizeCategory(it.category) }
                 .mapValues { (_, items) -> items.size }
 
             val categoryTotals = filteredLists
                 .flatMap { list ->
                     list.items.map { item ->
-                        val category = item.category.ifBlank { "כללי" }
+                        val category = normalizeCategory(item.category)
                         val quantity = item.quantity.toDoubleOrNull() ?: 1.0
                         val price = getSelectedStoreItemPrice(item, list.selectedStore)
                         category to (price * quantity)
@@ -163,8 +163,9 @@ fun StatsScreen(
             ) {
                 item {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(onClick = onBackClick) {
@@ -180,7 +181,6 @@ fun StatsScreen(
                             text = "סטטיסטיקות",
                             style = MaterialTheme.typography.headlineSmall
                         )
-
                     }
                 }
 
@@ -385,6 +385,11 @@ fun StatsScreen(
 
                                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     categoryCounts.forEach { (category, count) ->
+                                        val categoryColor =
+                                            androidx.compose.ui.graphics.Color(getCategoryColor(category))
+                                        val categoryProgress =
+                                            (count.toFloat() / maxCategoryCount.toFloat()) * 0.92f
+
                                         Column {
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
@@ -397,8 +402,10 @@ fun StatsScreen(
                                             Spacer(modifier = Modifier.height(4.dp))
 
                                             LinearProgressIndicator(
-                                                progress = count.toFloat() / maxCategoryCount.toFloat(),
-                                                modifier = Modifier.fillMaxWidth()
+                                                progress = categoryProgress,
+                                                modifier = Modifier.fillMaxWidth(),
+                                                color = categoryColor,
+                                                trackColor = categoryColor.copy(alpha = 0.18f)
                                             )
                                         }
                                     }
@@ -516,7 +523,7 @@ private fun CatalogStatsContent(
             val products = state.data
 
             val categoryCounts = products
-                .groupBy { it.category.ifBlank { "כללי" } }
+                .groupBy { normalizeCategory(it.category) }
                 .mapValues { it.value.size }
 
             val max = categoryCounts.values.maxOrNull() ?: 1
@@ -533,21 +540,12 @@ private fun CatalogStatsContent(
                     Column(
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        categoryCounts.entries.forEachIndexed { index, entry ->
+                        categoryCounts.entries.forEach { entry ->
                             val category = entry.key
                             val count = entry.value
-                            val progress = count.toFloat() / max.toFloat()
-
-                            val color = when (index % 8) {
-                                0 -> androidx.compose.ui.graphics.Color(0xFF4CAF50)
-                                1 -> androidx.compose.ui.graphics.Color(0xFF2196F3)
-                                2 -> androidx.compose.ui.graphics.Color(0xFFFF9800)
-                                3 -> androidx.compose.ui.graphics.Color(0xFF9C27B0)
-                                4 -> androidx.compose.ui.graphics.Color(0xFFE91E63)
-                                5 -> androidx.compose.ui.graphics.Color(0xFF00BCD4)
-                                6 -> androidx.compose.ui.graphics.Color(0xFF8BC34A)
-                                else -> androidx.compose.ui.graphics.Color(0xFFFFC107)
-                            }
+                            val progress = (count.toFloat() / max.toFloat()) * 0.92f
+                            val color =
+                                androidx.compose.ui.graphics.Color(getCategoryColor(category))
 
                             Column {
                                 Row(
@@ -585,6 +583,7 @@ private fun CatalogStatsContent(
         }
     }
 }
+
 @Composable
 private fun UsersStatsContent() {
     var usersCount by remember { mutableStateOf(0) }
@@ -742,9 +741,7 @@ private fun CategoryPieChart(
                 setNoDataText("אין נתוני קטגוריות להצגה")
                 animateY(1000)
 
-                setDrawEntryLabels(true)
-                setEntryLabelTextSize(11f)
-                setEntryLabelColor(AndroidColor.BLACK)
+                setDrawEntryLabels(false)
 
                 holeRadius = 42f
                 transparentCircleRadius = 46f
@@ -781,8 +778,13 @@ private fun CategoryPieChart(
             }
 
             val dataSet = PieDataSet(entries, "").apply {
-                valueTextSize = 11f
+                valueTextSize = 9f
                 valueTextColor = AndroidColor.BLACK
+                valueFormatter = object : ValueFormatter() {
+                    override fun getFormattedValue(value: Float): String {
+                        return "%.1f%%".format(value)
+                    }
+                }
                 sliceSpace = 2f
                 selectionShift = 6f
                 colors = entries.map { entry ->
@@ -849,21 +851,33 @@ private fun CompletedListsBarChart(
     )
 }
 
+private fun normalizeCategory(category: String): String {
+    return when (category.trim()) {
+        "מוצרי חלב", "ביצים" -> "מוצרי חלב וביצים"
+        "ביצים ודגנים" -> "ביצים ודגנים"
+        "מאפים ודגנים" -> "מאפה ודגנים"
+        "מוצרי ניקיון" -> "ניקיון והיגיינה"
+        "שתיה" -> "שתייה"
+        else -> category.trim().ifBlank { "כללי" }
+    }
+}
+
 private fun getCategoryColor(category: String): Int {
     return when (category.trim()) {
-        "ביצים ודגנים" -> AndroidColor.rgb(255, 193, 7)      // צהוב
-        "פחמימות" -> AndroidColor.rgb(255, 87, 34)           // כתום-אדום
-        "שתייה", "שתיה" -> AndroidColor.rgb(0, 188, 212)     // טורקיז
-        "בשר ודגים" -> AndroidColor.rgb(121, 85, 72)         // חום
-        "חטיפים ומתוקים" -> AndroidColor.rgb(233, 30, 99)   // ורוד
-        "ירקות" -> AndroidColor.rgb(76, 175, 80)             // ירוק
-        "מוצרי חלב" -> AndroidColor.rgb(33, 150, 243)        // כחול
-        "מוצרי ניקיון" -> AndroidColor.rgb(156, 39, 176)     // סגול
-        "פירות" -> AndroidColor.rgb(63, 81, 181)             // אינדיגו
-
-        else -> AndroidColor.rgb(158, 158, 158)
+        "פירות וירקות" -> AndroidColor.rgb(76, 175, 80)
+        "מוצרי חלב וביצים" -> AndroidColor.rgb(33, 150, 243)
+        "מאפה ודגנים", "מאפים ודגנים" -> AndroidColor.rgb(255, 193, 7)
+        "ביצים ודגנים" -> AndroidColor.rgb(255, 193, 7)
+        "ניקיון והיגיינה", "מוצרי ניקיון" -> AndroidColor.rgb(156, 39, 176)
+        "בשר ודגים" -> AndroidColor.rgb(121, 85, 72)
+        "חטיפים ומתוקים" -> AndroidColor.rgb(233, 30, 99)
+        "שתייה", "שתיה" -> AndroidColor.rgb(0, 188, 212)
+        "פחמימות" -> AndroidColor.rgb(255, 87, 34)
+        "פירות" -> AndroidColor.rgb(63, 81, 181)
+        "ירקות" -> AndroidColor.rgb(76, 175, 80)
+        else -> AndroidColor.rgb(255, 152, 0)
     }
-    }
+}
 
 private class CurrencyValueFormatter : ValueFormatter() {
     override fun getFormattedValue(value: Float): String {
