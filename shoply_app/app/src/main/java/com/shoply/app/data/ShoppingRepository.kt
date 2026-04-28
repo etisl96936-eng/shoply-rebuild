@@ -1,4 +1,5 @@
 package com.shoply.app.data.repository
+
 import com.google.firebase.firestore.FirebaseFirestore
 import com.shoply.app.data.CompletedShoppingList
 import com.shoply.app.data.ShoppingItem
@@ -7,11 +8,9 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import com.shoply.app.data.StorePrice
 
 class ShoppingRepository {
     private val firestore = FirebaseFirestore.getInstance()
-    private val itemsCollection = firestore.collection("items")
 
     private fun shoppingListsCollection(uid: String) =
         firestore.collection("users")
@@ -35,24 +34,6 @@ class ShoppingRepository {
             .await()
     }
 
-    // קטלוג גלובלי
-    fun getItemsFlow(): Flow<List<ShoppingItem>> = callbackFlow {
-        val subscription = itemsCollection
-            .orderBy("timestamp")
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    close(error)
-                    return@addSnapshotListener
-                }
-
-                val items = snapshot?.toObjects(ShoppingItem::class.java) ?: emptyList()
-                trySend(items)
-            }
-
-        awaitClose { subscription.remove() }
-    }
-
-    // רשימת קניות אישית של משתמש - המבנה הישן
     fun getUserShoppingListFlow(uid: String): Flow<List<ShoppingItem>> = callbackFlow {
         val subscription = firestore
             .collection("users")
@@ -90,10 +71,6 @@ class ShoppingRepository {
 
         awaitClose { subscription.remove() }
     }
-
-    // =========================
-    // Shopping Lists - מבנה חדש
-    // =========================
 
     suspend fun createShoppingList(
         uid: String,
@@ -136,7 +113,7 @@ class ShoppingRepository {
         }
 
         (myLists + sharedLists)
-            .distinctBy { it.id }
+            .distinctBy { "${it.ownerUid}_${it.id}" }
             .sortedByDescending { it.updatedAt }
     }
 
@@ -225,7 +202,8 @@ class ShoppingRepository {
             category = "כללי",
             description = "",
             isChecked = false,
-            timestamp = System.currentTimeMillis()
+            timestamp = System.currentTimeMillis(),
+            storePrices = emptyList()
         )
 
         newDoc.set(item).await()
@@ -247,8 +225,6 @@ class ShoppingRepository {
         val docRef = shoppingListItemsCollection(uid, listId).document(docId)
         val snapshot = docRef.get().await()
 
-        val pricesToSave = catalogItem.storePrices
-
         if (snapshot.exists()) {
             val existingItem = snapshot.toObject(ShoppingItem::class.java)
             val currentQty = existingItem?.quantity?.toIntOrNull()?.coerceAtLeast(1) ?: 1
@@ -259,7 +235,7 @@ class ShoppingRepository {
                 mapOf(
                     "quantity" to newQty,
                     "isChecked" to false,
-                    "storePrices" to pricesToSave
+                    "storePrices" to catalogItem.storePrices
                 )
             ).await()
         } else {
@@ -270,7 +246,7 @@ class ShoppingRepository {
                 isSelected = false,
                 isPurchased = false,
                 timestamp = System.currentTimeMillis(),
-                storePrices = pricesToSave
+                storePrices = catalogItem.storePrices
             )
 
             docRef.set(itemToSave).await()
@@ -320,25 +296,6 @@ class ShoppingRepository {
         updateShoppingListTimestamp(uid, listId)
     }
 
-    // הוספת מוצר לקטלוג הגלובלי
-    suspend fun addItem(item: ShoppingItem) {
-        try {
-            val newDocRef = itemsCollection.document()
-            val itemWithId = item.copy(id = newDocRef.id)
-            newDocRef.set(itemWithId).await()
-        } catch (e: Exception) {
-            println("Error adding item: ${e.message}")
-        }
-    }
-
-    // מחיקת מוצר מהקטלוג הגלובלי
-    suspend fun deleteItem(itemId: String) {
-        if (itemId.isNotEmpty()) {
-            itemsCollection.document(itemId).delete().await()
-        }
-    }
-
-    // הוספת מוצר לרשימה האישית - המבנה הישן
     suspend fun addToUserShoppingList(uid: String, item: ShoppingItem) {
         if (uid.isBlank() || item.id.isBlank()) return
 
@@ -350,7 +307,6 @@ class ShoppingRepository {
             .await()
     }
 
-    // הסרת מוצר מהרשימה האישית - המבנה הישן
     suspend fun removeFromUserShoppingList(uid: String, itemId: String) {
         if (uid.isBlank() || itemId.isBlank()) return
 
@@ -362,7 +318,6 @@ class ShoppingRepository {
             .await()
     }
 
-    // סימון/ביטול מוצר ברשימה האישית - המבנה הישן
     suspend fun toggleItemInUserShoppingList(uid: String, item: ShoppingItem) {
         if (uid.isBlank() || item.id.isBlank()) return
 
@@ -380,7 +335,6 @@ class ShoppingRepository {
         }
     }
 
-    // עדכון מצב נקנה בתוך הרשימה האישית - המבנה הישן
     suspend fun updatePurchasedInUserShoppingList(uid: String, itemId: String, isChecked: Boolean) {
         if (uid.isBlank() || itemId.isBlank()) return
 
@@ -394,12 +348,13 @@ class ShoppingRepository {
 
     suspend fun completeShoppingList(
         uid: String,
+        listId: String,
         listName: String,
         items: List<ShoppingItem>,
         selectedStore: String,
         totalAmount: Double
-    ){
-        if (uid.isBlank() || items.isEmpty() || selectedStore.isBlank()) return
+    ) {
+        if (uid.isBlank() || listId.isBlank() || items.isEmpty() || selectedStore.isBlank()) return
 
         val completedListRef = firestore.collection("users")
             .document(uid)
@@ -412,18 +367,20 @@ class ShoppingRepository {
             "completedAt" to System.currentTimeMillis(),
             "selectedStore" to selectedStore,
             "items" to items,
-            "totalAmount" to totalAmount,
+            "totalAmount" to totalAmount
         )
 
         completedListRef.set(completedData).await()
 
-        val shoppingListCollection = firestore.collection("users")
-            .document(uid)
-            .collection("shopping_list")
-
-        items.forEach { item ->
-            shoppingListCollection.document(item.id).delete().await()
-        }
+        shoppingListsCollection(uid)
+            .document(listId)
+            .update(
+                mapOf(
+                    "status" to ShoppingList.STATUS_ARCHIVED,
+                    "updatedAt" to System.currentTimeMillis()
+                )
+            )
+            .await()
     }
 
     suspend fun deleteCompletedList(uid: String, listId: String) {

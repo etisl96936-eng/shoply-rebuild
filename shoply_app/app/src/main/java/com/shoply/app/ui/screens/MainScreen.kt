@@ -457,16 +457,6 @@ fun MainScreen(
                 }
             }
 
-            if (showAddDialog) {
-                AddItemDialog(
-                    onDismiss = { showAddDialog = false },
-                    onConfirm = { name, quantity, description, category ->
-                        viewModel.addItem(name, quantity, description, category)
-                        showAddDialog = false
-                    }
-                )
-            }
-
             if (showChooseActiveListDialog) {
                 ChooseActiveListDialog(
                     shoppingListsState = shoppingListsState,
@@ -513,7 +503,6 @@ fun MainScreen(
                     confirmText = "מחק",
                     dismissText = "ביטול",
                     onConfirm = {
-                        viewModel.deleteItem(item.id)
                         itemToDelete = null
                     },
                     onDismiss = { itemToDelete = null }
