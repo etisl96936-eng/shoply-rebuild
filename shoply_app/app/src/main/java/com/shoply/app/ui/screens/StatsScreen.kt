@@ -736,6 +736,21 @@ private fun CategoryPieChart(
             .height(430.dp),
         factory = { context ->
             PieChart(context).apply {
+                setOnChartValueSelectedListener(object : com.github.mikephil.charting.listener.OnChartValueSelectedListener {
+                    override fun onValueSelected(
+                        e: com.github.mikephil.charting.data.Entry?,
+                        h: com.github.mikephil.charting.highlight.Highlight?
+                    ) {
+                        val pieEntry = e as? PieEntry ?: return
+                        android.widget.Toast.makeText(
+                            context,
+                            pieEntry.label,
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }
+
+                    override fun onNothingSelected() {}
+                })
                 description.isEnabled = false
                 setUsePercentValues(true)
                 setNoDataText("אין נתוני קטגוריות להצגה")
