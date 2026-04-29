@@ -437,6 +437,11 @@ private fun ShoppingListItemRow(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
+                                    text = store,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+
+                                Text(
                                     text = if (price != null) {
                                         "₪${"%.2f".format(price)}"
                                     } else {
