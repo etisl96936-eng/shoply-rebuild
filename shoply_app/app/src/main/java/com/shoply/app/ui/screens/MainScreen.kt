@@ -1,5 +1,6 @@
 package com.shoply.app.ui.screens
 
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import android.app.Activity
@@ -91,6 +92,10 @@ fun MainScreen(
     }
 
     val windowSize = rememberShoplyWindowSize(activity)
+    val configuration = LocalConfiguration.current
+    val isLandscapeCompact = configuration.screenWidthDp > configuration.screenHeightDp &&
+            configuration.screenHeightDp < 500
+
     val gridColumns = ShoplyResponsive.gridColumns(windowSize)
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -322,29 +327,30 @@ fun MainScreen(
                             singleLine = true,
                             shape = MaterialTheme.shapes.medium
                         )
+                        if (!isLandscapeCompact) {
+                            Spacer(modifier = Modifier.height(ShoplySpacing.small))
 
-                        Spacer(modifier = Modifier.height(ShoplySpacing.small))
+                            CategoryChips(
+                                allItems = baseItems,
+                                selectedCategory = selectedCategory,
+                                onCategorySelected = { selectedCategory = it }
+                            )
 
-                        CategoryChips(
-                            allItems = baseItems,
-                            selectedCategory = selectedCategory,
-                            onCategorySelected = { selectedCategory = it }
-                        )
+                            Spacer(modifier = Modifier.height(ShoplySpacing.small))
 
-                        Spacer(modifier = Modifier.height(ShoplySpacing.small))
+                            ActiveListHeader(
+                                shoppingListsState = shoppingListsState,
+                                activeListName = activeListName,
+                                isExpanded = activeListName.isBlank(),
+                                onChooseListClick = {
+                                    viewModel.loadActiveShoppingLists()
+                                    showChooseActiveListDialog = true
+                                },
+                                onGoToMyListsClick = { navController.navigate(Screen.MyLists.route) }
+                            )
 
-                        ActiveListHeader(
-                            shoppingListsState = shoppingListsState,
-                            activeListName = activeListName,
-                            isExpanded = activeListName.isBlank(),                            onChooseListClick = {
-                                viewModel.loadActiveShoppingLists()
-                                showChooseActiveListDialog = true
-                            },
-                            onGoToMyListsClick = { navController.navigate(Screen.MyLists.route) }
-                        )
-
-                        Spacer(modifier = Modifier.height(ShoplySpacing.small))
-
+                            Spacer(modifier = Modifier.height(ShoplySpacing.small))
+                        }
                         if (filteredItems.isEmpty()) {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 Text(
