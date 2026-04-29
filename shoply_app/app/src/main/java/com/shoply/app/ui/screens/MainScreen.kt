@@ -900,12 +900,6 @@ private fun ShoplyDrawerContent(
                 onClick = onMyListsClick
             )
 
-            DrawerItem(
-                icon = Icons.Default.Settings,
-                label = "הגדרות",
-                onClick = onSettingsClick
-            )
-
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = ShoplySpacing.small)
             )
